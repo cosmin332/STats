@@ -25,7 +25,25 @@ Tout le calcul se fait dans le navigateur ([compute.js](compute.js)) — aucune 
 
 L'app fonctionne ensuite hors-ligne (service worker).
 
-## Mettre à jour les données
+## Connecter l'API Strava (sync automatique)
+
+1. Crée ton application API sur **[strava.com/settings/api](https://www.strava.com/settings/api)** :
+   - *Category* : libre (par ex. « Data Importer »)
+   - *Authorization Callback Domain* : **cosmin332.github.io** (le domaine de la page, sans https:// ni chemin)
+2. Récupère le **Client ID** et le **Client Secret**, puis :
+   - soit renseigne-les dans **`config.js`** et pousse (assumé public — n'importe qui pourra utiliser
+     ces identifiants d'app, mais pas accéder à ton compte sans ton autorisation OAuth) ;
+   - soit clique **⚙️** dans l'app et colle-les (stockage local sur l'appareil uniquement).
+3. Bouton **« 🔗 Connecter Strava »** → autorisation sur strava.com → retour automatique dans l'app
+   → toutes les activités sont synchronisées. Ensuite le bouton devient **« 🔄 Sync Strava »**.
+
+L'app utilise le scope `activity:read_all` (lecture seule). Les jetons et activités sont en cache
+local (localStorage) ; « ↺ » déconnecte et efface tout.
+
+Données en plus via l'API : cadence. Données en moins vs CSV : météo, charge d'entraînement native
+(remplacée par le « relative effort »), calories/pas (estimés).
+
+## Mettre à jour les données (sans API)
 
 Deux options :
 
@@ -46,7 +64,9 @@ Le service worker récupère le nouveau fichier au rechargement suivant.
 | Fichier | Rôle |
 |---|---|
 | `index.html` | Shell de l'app (UI, styles) |
-| `compute.js` | Parsing CSV + calcul de toutes les statistiques |
+| `compute.js` | Calcul de toutes les statistiques (sources : CSV **ou** API Strava) |
+| `strava.js` | OAuth + synchronisation API Strava |
+| `config.js` | Client ID/Secret de ton application API Strava (optionnel) |
 | `app.js` | Rendu des graphiques (Chart.js), import, service worker |
 | `activities.csv` | Données par défaut (export Strava) |
 | `sw.js` / `manifest.webmanifest` / `icons/` | PWA (offline + installation) |

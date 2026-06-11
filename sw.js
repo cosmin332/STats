@@ -1,11 +1,13 @@
 /* Service worker : précache le shell de l'app, stratégie stale-while-revalidate
    pour que les mises à jour du dépôt (dont activities.csv) arrivent au rechargement suivant. */
-const CACHE = 'running-stats-v1';
+const CACHE = 'running-stats-v2';
 const ASSETS = [
   './',
   './index.html',
   './app.js',
   './compute.js',
+  './strava.js',
+  './config.js',
   './activities.csv',
   './manifest.webmanifest',
   './vendor/chart.umd.min.js',

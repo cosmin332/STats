@@ -26,7 +26,7 @@
          padding: 16px; padding-top: calc(16px + env(safe-area-inset-top)); }
   .container { max-width: 1200px; margin: 0 auto; }
   header { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 6px; }
-  h1 { font-size: 1.45rem; flex: 1; min-width: 200px; } h1 .orange { color: var(--accent); }
+  h1 { font-size: 1.45rem; flex: 1; min-width: 180px; } h1 .orange { color: var(--accent); }
   .toolbar { display: flex; gap: 8px; flex-wrap: wrap; }
   .btn { background: var(--card2); color: var(--text); border: 1px solid var(--border); border-radius: 10px;
          padding: 8px 14px; font-size: .85rem; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
@@ -63,6 +63,24 @@
   .duel-col .p { font-size: 1.45rem; font-weight: 800; }
   .duel-col .p.new { color: var(--green); }
   .duel .delta { font-size: 1rem; font-weight: 700; color: var(--green); background: rgba(61,220,132,.12); padding: 8px 14px; border-radius: 10px; }
+  .riegel-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; }
+  .riegel-item { background: var(--card2); border: 1px solid var(--border); border-radius: 10px; padding: 12px; text-align: center; }
+  .riegel-item .rg-d { color: var(--muted); font-size: .78rem; }
+  .riegel-item .rg-t { font-size: 1.25rem; font-weight: 800; color: var(--accent2); margin: 3px 0; }
+  .riegel-item .rg-p { color: var(--muted); font-size: .78rem; }
+  .proj-row { display: flex; gap: 24px; flex-wrap: wrap; margin-bottom: 10px; }
+  .proj-col .pv { font-size: 1.5rem; font-weight: 800; color: var(--accent); }
+  .proj-col .pl { color: var(--muted); font-size: .8rem; }
+  .bar { background: #1f2636; border-radius: 6px; height: 10px; overflow: hidden; }
+  .bar-fill { height: 100%; background: var(--accent); border-radius: 6px; transition: width .4s; }
+  .shoe { margin-bottom: 12px; }
+  .shoe-name { font-size: .84rem; margin-bottom: 5px; }
+  .shoe-km { color: var(--muted); font-size: .76rem; float: right; }
+  .badges { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 10px; }
+  .badge-card { display: flex; gap: 10px; align-items: center; background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 10px 13px; }
+  .badge-card .bi { font-size: 1.4rem; }
+  .badge-card .bt { font-weight: 700; font-size: .84rem; }
+  .badge-card .bs { color: var(--muted); font-size: .74rem; }
   table { width: 100%; border-collapse: collapse; font-size: .82rem; }
   th { text-align: left; color: var(--muted); font-weight: 600; padding: 6px 7px; border-bottom: 1px solid var(--border); }
   td { padding: 6px 7px; border-bottom: 1px solid #1f2636; }
@@ -74,6 +92,11 @@
   .heat .lbl { color: var(--muted); display: flex; align-items: center; }
   .heat .cell { aspect-ratio: 1; border-radius: 3px; background: #1f2636; }
   .heat .hlbl { color: var(--muted); text-align: center; }
+  .cal-months { display: grid; gap: 2px; color: var(--muted); font-size: .65rem; min-width: 560px; margin-bottom: 4px; }
+  .cal-grid { display: grid; gap: 2px; min-width: 560px; }
+  .cal-cell { aspect-ratio: 1; border-radius: 2px; background: #1f2636; }
+  .cal-cell.l1 { background: rgba(252,82,0,.3); } .cal-cell.l2 { background: rgba(252,82,0,.55); }
+  .cal-cell.l3 { background: rgba(252,82,0,.8); } .cal-cell.l4 { background: #fc5200; }
   .insights { line-height: 1.6; font-size: .9rem; }
   .insights li { margin: 8px 0 8px 18px; }
   .insights b { color: var(--accent); }
@@ -81,6 +104,15 @@
   .insights .warn { color: var(--yellow); font-weight: 600; }
   footer { color: var(--muted); font-size: .72rem; text-align: center; margin: 36px 0 10px; }
   #err { display: none; background: #5c1a1a; color: #ffd7d7; padding: 10px 14px; border-radius: 10px; margin-bottom: 14px; font-size: .85rem; white-space: pre-wrap; }
+  dialog { background: var(--card); color: var(--text); border: 1px solid var(--border); border-radius: 14px;
+           padding: 22px; max-width: 420px; width: 92vw; }
+  dialog::backdrop { background: rgba(0,0,0,.6); }
+  dialog h3 { margin-bottom: 10px; }
+  dialog p { color: var(--muted); font-size: .8rem; line-height: 1.5; margin-bottom: 12px; }
+  dialog label { display: block; font-size: .8rem; color: var(--muted); margin: 10px 0 4px; }
+  dialog input { width: 100%; background: var(--bg); color: var(--text); border: 1px solid var(--border);
+                 border-radius: 8px; padding: 9px 11px; font-size: .9rem; }
+  dialog .dlg-btns { display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px; }
 </style>
 </head>
 <body>
@@ -88,8 +120,10 @@
   <header>
     <h1>🏃 <span class="orange">Running</span> stats</h1>
     <div class="toolbar">
-      <label class="btn primary">📥 Importer activities.csv<input type="file" id="fileInput" accept=".csv,text/csv" hidden></label>
-      <button class="btn" id="resetBtn" title="Revenir aux données embarquées">↺ Données du dépôt</button>
+      <button class="btn primary" id="stravaBtn">🔗 Connecter Strava</button>
+      <label class="btn">📥 Importer activities.csv<input type="file" id="fileInput" accept=".csv,text/csv" hidden></label>
+      <button class="btn" id="cfgBtn" title="Identifiants de l'application API Strava">⚙️</button>
+      <button class="btn" id="resetBtn" title="Déconnecter Strava et revenir aux données embarquées">↺</button>
     </div>
     <div id="importMsg"></div>
   </header>
@@ -102,6 +136,12 @@
   <div class="grid3" id="records"></div>
   <div class="duel" id="duel" style="display:none"></div>
 
+  <h2>🎯 Prédictions & objectifs</h2>
+  <div class="grid2">
+    <div class="card" id="riegelCard"><h3>Chronos prédits (formule de Riegel)</h3><div id="riegelBody"></div></div>
+    <div class="card"><h3>Projection de l'année en cours</h3><div id="projBody"></div></div>
+  </div>
+
   <h2>📈 Volume d'entraînement</h2>
   <div class="grid2">
     <div class="card"><h3>Kilométrage mensuel & allure moyenne</h3><div class="chart-wrap"><canvas id="cMonthly"></canvas></div></div>
@@ -110,7 +150,9 @@
     <div class="card"><h3>Kilométrage cumulé par année</h3><div class="chart-wrap"><canvas id="cCum"></canvas></div>
       <div class="note" id="cumNote"></div></div>
     <div class="card"><h3>Courbe de forme — fitness / fatigue / fraîcheur</h3><div class="chart-wrap"><canvas id="cForm"></canvas></div>
-      <div class="note">Modèle CTL/ATL sur l'effort relatif de <b>toutes</b> les activités : <span style="color:#4cc2ff">fitness</span> = moyenne exponentielle 42 j, <span style="color:#ff4d6d">fatigue</span> = 7 j, <span style="color:#3ddc84">fraîcheur</span> = fitness − fatigue. Fraîcheur négative = bloc de charge, positive = récupération/affûtage.</div></div>
+      <div class="note">Modèle CTL/ATL sur l'effort relatif de <b>toutes</b> les activités : <span style="color:#4cc2ff">fitness</span> = moyenne exponentielle 42 j, <span style="color:#ff4d6d">fatigue</span> = 7 j, <span style="color:#3ddc84">fraîcheur</span> = fitness − fatigue.</div></div>
+    <div class="card"><h3>ACWR — ratio de charge aiguë/chronique (anti-blessure)</h3><div class="chart-wrap"><canvas id="cAcwr"></canvas></div>
+      <div class="note" id="acwrNote"></div></div>
   </div>
 
   <h2>⚡ Allure & cardio</h2>
@@ -120,10 +162,15 @@
     <div class="card"><h3>Temps par zone cardiaque (FC max observée : <span id="fcmax"></span> bpm)</h3><div class="chart-wrap short"><canvas id="cZones"></canvas></div>
       <div class="note">Zones estimées à partir de la FC moyenne de chaque sortie rapportée à la FC max observée en course.</div></div>
     <div class="card"><h3>FC moyenne mensuelle vs allure — efficacité aérobie</h3><div class="chart-wrap short"><canvas id="cEff"></canvas></div></div>
+    <div class="card"><h3>Cadence (pas/min)</h3><div class="chart-wrap short"><canvas id="cCad"></canvas></div>
+      <div class="note" id="cadNote"></div></div>
   </div>
 
   <h2>🗓️ Habitudes d'entraînement</h2>
-  <div class="grid2">
+  <div class="card"><h3>Calendrier des 12 derniers mois</h3>
+    <div class="heat-scroll"><div id="calendar"></div></div>
+    <div class="note" id="calNote"></div></div>
+  <div class="grid2" style="margin-top:14px">
     <div class="card"><h3>Répartition des distances</h3><div class="chart-wrap short"><canvas id="cHist"></canvas></div></div>
     <div class="card"><h3>Courses par jour de la semaine</h3><div class="chart-wrap short"><canvas id="cDow"></canvas></div></div>
   </div>
@@ -131,10 +178,15 @@
 
   <h2>🌦️ Conditions & matériel</h2>
   <div class="grid2">
-    <div class="card"><h3>Température vs allure</h3><div class="chart-wrap short"><canvas id="cTemp"></canvas></div></div>
+    <div class="card"><h3>Température vs allure</h3><div class="chart-wrap short"><canvas id="cTemp"></canvas></div>
+      <div class="note">Météo disponible uniquement via l'export CSV (l'API Strava ne la fournit pas).</div></div>
     <div class="card"><h3>Kilométrage par paire de chaussures</h3><div class="chart-wrap short"><canvas id="cGear"></canvas></div>
       <div class="note">« Sans matériel » = sorties sans chaussure assignée sur Strava.</div></div>
   </div>
+  <div class="card" style="margin-top:14px"><h3>Usure des chaussures (repère ~600 km)</h3><div id="shoeBars"></div></div>
+
+  <h2>🏅 Jalons</h2>
+  <div class="badges" id="badges"></div>
 
   <h2>📅 Bilan par année & autres sports</h2>
   <div class="grid2">
@@ -152,6 +204,24 @@
   <footer id="footer"></footer>
 </div>
 
+<dialog id="cfgDlg">
+  <h3>⚙️ Application API Strava</h3>
+  <p>Crée ton application sur <b>strava.com/settings/api</b> (catégorie libre,
+     « Authorization Callback Domain » = le domaine de cette page, par ex. <b>cosmin332.github.io</b>),
+     puis recopie les identifiants ci-dessous. Ils sont stockés sur cet appareil
+     (ou dans <b>config.js</b> du dépôt pour tous les appareils).</p>
+  <form method="dialog">
+    <label for="cfgId">Client ID</label>
+    <input id="cfgId" inputmode="numeric" autocomplete="off" placeholder="12345">
+    <label for="cfgSecret">Client Secret</label>
+    <input id="cfgSecret" autocomplete="off" placeholder="abc123…">
+    <div class="dlg-btns">
+      <button class="btn" id="cfgCancel">Annuler</button>
+      <button class="btn primary" id="cfgSave">Enregistrer & connecter</button>
+    </div>
+  </form>
+</dialog>
+
 <script>
   window.onerror = function (msg, src, line) {
     var e = document.getElementById('err');
@@ -159,7 +229,9 @@
     e.textContent += 'Erreur : ' + msg + ' (' + (src || '').split('/').pop() + ':' + line + ')\n';
   };
 </script>
+<script src="./config.js"></script>
 <script src="./compute.js"></script>
+<script src="./strava.js"></script>
 <script src="./app.js"></script>
 </body>
 </html>
