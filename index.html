@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>🏃 Running — Cosmin</title>
-<meta name="theme-color" content="#0e1117">
+<meta name="theme-color" content="#07090f">
 <link rel="manifest" href="./manifest.webmanifest">
 <link rel="icon" href="./icons/icon-192.png">
 <link rel="apple-touch-icon" href="./icons/icon-180.png">
@@ -16,225 +16,345 @@
 <script src="./vendor/chartjs-adapter-date-fns.bundle.min.js"></script>
 <style>
   :root {
-    --bg: #0e1117; --card: #171c26; --card2: #1d2433;
-    --text: #e6e9f0; --muted: #8a93a6; --accent: #fc5200;
-    --accent2: #4cc2ff; --green: #3ddc84; --yellow: #ffd166; --purple: #b388ff;
-    --border: #262e40;
+    --bg: #07090f;
+    --glass: rgba(255,255,255,.045);
+    --glass2: rgba(255,255,255,.07);
+    --border: rgba(255,255,255,.09);
+    --text: #e8edf7; --muted: #7d8aa3;
+    --cyan: #22d3ee; --magenta: #ff2d95; --neon: #54f283;
+    --amber: #ffd166; --violet: #a78bfa; --red: #ff4d6d;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { background: var(--bg); color: var(--text); font-family: -apple-system, "Segoe UI", Roboto, sans-serif;
-         padding: 16px; padding-top: calc(16px + env(safe-area-inset-top)); }
+  html { scroll-behavior: smooth; }
+  body {
+    background: var(--bg) radial-gradient(900px 500px at 85% -10%, rgba(34,211,238,.10), transparent 60%),
+                radial-gradient(800px 500px at -10% 25%, rgba(255,45,149,.07), transparent 55%),
+                radial-gradient(700px 600px at 50% 110%, rgba(84,242,131,.05), transparent 60%);
+    background-attachment: fixed;
+    color: var(--text); font-family: -apple-system, "Segoe UI", Roboto, sans-serif;
+    padding: 16px; padding-top: calc(14px + env(safe-area-inset-top));
+    padding-bottom: calc(84px + env(safe-area-inset-bottom));
+  }
   .container { max-width: 1200px; margin: 0 auto; }
-  header { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 6px; }
-  h1 { font-size: 1.45rem; flex: 1; min-width: 180px; } h1 .orange { color: var(--accent); }
+  header { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 4px; }
+  h1 { font-size: 1.4rem; flex: 1; min-width: 170px; letter-spacing: .3px; }
+  h1 .neon { color: var(--cyan); text-shadow: 0 0 18px rgba(34,211,238,.55); }
   .toolbar { display: flex; gap: 8px; flex-wrap: wrap; }
-  .btn { background: var(--card2); color: var(--text); border: 1px solid var(--border); border-radius: 10px;
-         padding: 8px 14px; font-size: .85rem; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
-  .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+  .btn { background: var(--glass2); color: var(--text); border: 1px solid var(--border); border-radius: 11px;
+         padding: 8px 14px; font-size: .84rem; cursor: pointer; backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
+  .btn.primary { background: linear-gradient(135deg, rgba(34,211,238,.25), rgba(34,211,238,.1));
+                 border-color: rgba(34,211,238,.5); color: #bff3ff; font-weight: 600; }
   .btn:active { transform: scale(.97); }
-  #importMsg { font-size: .8rem; color: var(--muted); width: 100%; }
-  .sub { color: var(--muted); font-size: .85rem; margin-bottom: 20px; }
-  h2 { font-size: 1.1rem; margin: 30px 0 14px; padding-left: 10px; border-left: 4px solid var(--accent); }
+  #importMsg { font-size: .78rem; color: var(--muted); width: 100%; }
+  .sub { color: var(--muted); font-size: .82rem; margin-bottom: 14px; }
+
+  /* ---- Tabs ---- */
+  .tabbar { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(10px + env(safe-area-inset-bottom));
+            display: flex; gap: 4px; background: rgba(13,17,27,.75); border: 1px solid var(--border);
+            border-radius: 18px; padding: 6px; backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px);
+            z-index: 50; box-shadow: 0 8px 32px rgba(0,0,0,.5); max-width: 96vw; }
+  .tabbtn { background: none; border: 0; color: var(--muted); font-size: .72rem; padding: 7px 10px;
+            border-radius: 13px; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 2px;
+            font-family: inherit; min-width: 58px; }
+  .tabbtn .ti { font-size: 1.15rem; }
+  .tabbtn.active { background: linear-gradient(135deg, rgba(34,211,238,.22), rgba(34,211,238,.08));
+                   color: #bff3ff; box-shadow: inset 0 0 0 1px rgba(34,211,238,.4); }
+  .tab { display: none; }
+  .tab.active { display: block; animation: fadein .25s ease; }
+  @keyframes fadein { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; } }
+
+  h2 { font-size: 1.02rem; margin: 26px 0 12px; padding-left: 10px; border-left: 3px solid var(--cyan); letter-spacing: .3px; }
   .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; }
-  .kpi { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; }
-  .kpi .v { font-size: 1.35rem; font-weight: 700; color: var(--accent); }
-  .kpi .v.blue { color: var(--accent2); } .kpi .v.green { color: var(--green); }
-  .kpi .v.yellow { color: var(--yellow); } .kpi .v.purple { color: var(--purple); }
-  .kpi .l { color: var(--muted); font-size: .74rem; margin-top: 3px; }
+  .kpi, .card, .record, .badge-card {
+    background: linear-gradient(160deg, var(--glass2), var(--glass));
+    border: 1px solid var(--border); border-radius: 16px;
+    backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+  }
+  .kpi { padding: 12px 14px; }
+  .kpi .v { font-size: 1.3rem; font-weight: 700; color: var(--cyan); text-shadow: 0 0 14px rgba(34,211,238,.35); }
+  .kpi .v.blue { color: var(--magenta); text-shadow: 0 0 14px rgba(255,45,149,.3); }
+  .kpi .v.green { color: var(--neon); text-shadow: 0 0 14px rgba(84,242,131,.3); }
+  .kpi .v.yellow { color: var(--amber); text-shadow: none; }
+  .kpi .v.purple { color: var(--violet); text-shadow: none; }
+  .kpi .l { color: var(--muted); font-size: .72rem; margin-top: 3px; }
   .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
   .grid3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 12px; }
   @media (max-width: 850px) { .grid2 { grid-template-columns: 1fr; } }
-  .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 16px; }
-  .card h3 { font-size: .92rem; margin-bottom: 12px; font-weight: 600; }
-  .card .note { color: var(--muted); font-size: .75rem; margin-top: 10px; line-height: 1.45; }
+  .card { padding: 16px; }
+  .card h3 { font-size: .9rem; margin-bottom: 12px; font-weight: 600; }
+  .card .note { color: var(--muted); font-size: .74rem; margin-top: 10px; line-height: 1.45; }
   .chart-wrap { position: relative; height: 300px; }
   .chart-wrap.short { height: 240px; }
   @media (max-width: 600px) { .chart-wrap { height: 250px; } .chart-wrap.short { height: 210px; } }
-  .record { background: linear-gradient(135deg, var(--card), var(--card2)); border: 1px solid var(--border); border-radius: 12px; padding: 13px 15px; }
-  .record .badge { font-size: 1.25rem; }
-  .record .t { font-weight: 700; margin: 4px 0 2px; font-size: .92rem; }
-  .record .d { color: var(--muted); font-size: .8rem; line-height: 1.5; }
-  .record .big { color: var(--accent); font-weight: 700; font-size: 1.1rem; }
-  .duel { background: linear-gradient(135deg, #1a2030, #232040); border: 1px solid #3a3560; border-radius: 14px; padding: 18px; margin-top: 16px; }
-  .duel h3 { margin-bottom: 12px; font-size: 1rem; }
+  .record { padding: 13px 15px; }
+  .record .badge { font-size: 1.2rem; }
+  .record .t { font-weight: 700; margin: 4px 0 2px; font-size: .9rem; }
+  .record .d { color: var(--muted); font-size: .78rem; line-height: 1.5; }
+  .record .big { color: var(--magenta); font-weight: 700; font-size: 1.08rem; text-shadow: 0 0 14px rgba(255,45,149,.35); }
+  .duel { background: linear-gradient(135deg, rgba(34,211,238,.08), rgba(255,45,149,.08));
+          border: 1px solid var(--border); border-radius: 16px; padding: 18px; margin-top: 14px;
+          backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); }
+  .duel h3 { margin-bottom: 12px; font-size: .98rem; }
   .duel-row { display: flex; gap: 18px; flex-wrap: wrap; align-items: center; }
   .duel-col { flex: 1; min-width: 180px; }
-  .duel-col .y { color: var(--muted); font-size: .78rem; }
-  .duel-col .p { font-size: 1.45rem; font-weight: 800; }
-  .duel-col .p.new { color: var(--green); }
-  .duel .delta { font-size: 1rem; font-weight: 700; color: var(--green); background: rgba(61,220,132,.12); padding: 8px 14px; border-radius: 10px; }
-  .riegel-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; }
-  .riegel-item { background: var(--card2); border: 1px solid var(--border); border-radius: 10px; padding: 12px; text-align: center; }
-  .riegel-item .rg-d { color: var(--muted); font-size: .78rem; }
-  .riegel-item .rg-t { font-size: 1.25rem; font-weight: 800; color: var(--accent2); margin: 3px 0; }
-  .riegel-item .rg-p { color: var(--muted); font-size: .78rem; }
+  .duel-col .y { color: var(--muted); font-size: .76rem; }
+  .duel-col .p { font-size: 1.4rem; font-weight: 800; }
+  .duel-col .p.new { color: var(--neon); text-shadow: 0 0 16px rgba(84,242,131,.4); }
+  .duel .delta { font-size: .95rem; font-weight: 700; color: var(--neon); background: rgba(84,242,131,.1);
+                 border: 1px solid rgba(84,242,131,.3); padding: 8px 14px; border-radius: 11px; }
+  .riegel-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(118px, 1fr)); gap: 10px; }
+  .riegel-item { background: rgba(255,255,255,.04); border: 1px solid var(--border); border-radius: 12px; padding: 12px; text-align: center; }
+  .riegel-item .rg-d { color: var(--muted); font-size: .76rem; }
+  .riegel-item .rg-t { font-size: 1.2rem; font-weight: 800; color: var(--cyan); margin: 3px 0; text-shadow: 0 0 12px rgba(34,211,238,.35); }
+  .riegel-item .rg-p { color: var(--muted); font-size: .76rem; }
+  .caps { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+  .cap { font-size: .76rem; padding: 6px 11px; border-radius: 9px; background: rgba(255,45,149,.08);
+         border: 1px solid rgba(255,45,149,.3); color: #ffc3e0; }
   .proj-row { display: flex; gap: 24px; flex-wrap: wrap; margin-bottom: 10px; }
-  .proj-col .pv { font-size: 1.5rem; font-weight: 800; color: var(--accent); }
-  .proj-col .pl { color: var(--muted); font-size: .8rem; }
-  .bar { background: #1f2636; border-radius: 6px; height: 10px; overflow: hidden; }
-  .bar-fill { height: 100%; background: var(--accent); border-radius: 6px; transition: width .4s; }
+  .proj-col .pv { font-size: 1.4rem; font-weight: 800; color: var(--cyan); }
+  .proj-col .pl { color: var(--muted); font-size: .78rem; }
+  .bar { background: rgba(255,255,255,.06); border-radius: 7px; height: 10px; overflow: hidden; }
+  .bar-fill { height: 100%; background: linear-gradient(90deg, var(--cyan), #67e8f9); border-radius: 7px;
+              box-shadow: 0 0 12px rgba(34,211,238,.5); transition: width .5s; }
+  .lastrun-line { display: flex; gap: 16px; flex-wrap: wrap; font-size: .86rem; margin-top: 6px; }
+  .lastrun-line b { color: var(--cyan); }
   .shoe { margin-bottom: 12px; }
-  .shoe-name { font-size: .84rem; margin-bottom: 5px; }
-  .shoe-km { color: var(--muted); font-size: .76rem; float: right; }
-  .ppm-chips { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
-  .ppm-chip { background: var(--card2); border: 1px solid var(--border); border-radius: 9px; padding: 7px 11px; font-size: .76rem; }
-  .ppm-chip b { color: var(--accent2); }
-  .ppm-chip .pc { color: var(--muted); }
-  .badges { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 10px; }
-  .badge-card { display: flex; gap: 10px; align-items: center; background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 10px 13px; }
-  .badge-card .bi { font-size: 1.4rem; }
-  .badge-card .bt { font-weight: 700; font-size: .84rem; }
-  .badge-card .bs { color: var(--muted); font-size: .74rem; }
-  table { width: 100%; border-collapse: collapse; font-size: .82rem; }
+  .shoe-name { font-size: .82rem; margin-bottom: 5px; }
+  .shoe-km { color: var(--muted); font-size: .74rem; float: right; }
+  .badges { display: grid; grid-template-columns: repeat(auto-fill, minmax(185px, 1fr)); gap: 10px; }
+  .badge-card { display: flex; gap: 10px; align-items: center; padding: 10px 13px; }
+  .badge-card .bi { font-size: 1.35rem; }
+  .badge-card .bt { font-weight: 700; font-size: .82rem; }
+  .badge-card .bs { color: var(--muted); font-size: .72rem; }
+  table { width: 100%; border-collapse: collapse; font-size: .8rem; }
   th { text-align: left; color: var(--muted); font-weight: 600; padding: 6px 7px; border-bottom: 1px solid var(--border); }
-  td { padding: 6px 7px; border-bottom: 1px solid #1f2636; }
+  td { padding: 6px 7px; border-bottom: 1px solid rgba(255,255,255,.05); }
   tr:last-child td { border-bottom: none; }
   td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
-  .table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
-  .heat-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
-  .heat { display: grid; grid-template-columns: 42px repeat(18, minmax(16px, 1fr)); gap: 3px; font-size: .65rem; min-width: 480px; }
+  .table-scroll, .heat-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .heat { display: grid; grid-template-columns: 42px repeat(18, minmax(16px, 1fr)); gap: 3px; font-size: .64rem; min-width: 480px; }
   .heat .lbl { color: var(--muted); display: flex; align-items: center; }
-  .heat .cell { aspect-ratio: 1; border-radius: 3px; background: #1f2636; }
+  .heat .cell { aspect-ratio: 1; border-radius: 3px; background: rgba(255,255,255,.05); }
   .heat .hlbl { color: var(--muted); text-align: center; }
-  .cal-months { display: grid; gap: 2px; color: var(--muted); font-size: .65rem; min-width: 560px; margin-bottom: 4px; }
+  .cal-months { display: grid; gap: 2px; color: var(--muted); font-size: .64rem; min-width: 560px; margin-bottom: 4px; }
   .cal-grid { display: grid; gap: 2px; min-width: 560px; }
-  .cal-cell { aspect-ratio: 1; border-radius: 2px; background: #1f2636; }
-  .cal-cell.l1 { background: rgba(252,82,0,.3); } .cal-cell.l2 { background: rgba(252,82,0,.55); }
-  .cal-cell.l3 { background: rgba(252,82,0,.8); } .cal-cell.l4 { background: #fc5200; }
-  .insights { line-height: 1.6; font-size: .9rem; }
-  .insights li { margin: 8px 0 8px 18px; }
-  .insights b { color: var(--accent); }
-  .insights .good { color: var(--green); font-weight: 600; }
-  .insights .warn { color: var(--yellow); font-weight: 600; }
-  footer { color: var(--muted); font-size: .72rem; text-align: center; margin: 36px 0 10px; }
-  #err { display: none; background: #5c1a1a; color: #ffd7d7; padding: 10px 14px; border-radius: 10px; margin-bottom: 14px; font-size: .85rem; white-space: pre-wrap; }
-  dialog { background: var(--card); color: var(--text); border: 1px solid var(--border); border-radius: 14px;
+  .cal-cell { aspect-ratio: 1; border-radius: 2.5px; background: rgba(255,255,255,.05); }
+  .cal-cell.l1 { background: rgba(34,211,238,.3); } .cal-cell.l2 { background: rgba(34,211,238,.55); }
+  .cal-cell.l3 { background: rgba(34,211,238,.8); box-shadow: 0 0 6px rgba(34,211,238,.4); }
+  .cal-cell.l4 { background: #22d3ee; box-shadow: 0 0 9px rgba(34,211,238,.7); }
+  .ppm-chips { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+  .ppm-chip { background: rgba(255,255,255,.05); border: 1px solid var(--border); border-radius: 9px; padding: 7px 11px; font-size: .74rem; }
+  .ppm-chip b { color: var(--cyan); }
+  .ppm-chip .pc { color: var(--muted); }
+  /* Checklist bouclier */
+  .check-item { display: flex; align-items: center; gap: 11px; padding: 9px 4px; border-bottom: 1px solid rgba(255,255,255,.05); cursor: pointer; }
+  .check-item:last-child { border-bottom: none; }
+  .check-box { width: 21px; height: 21px; border-radius: 7px; border: 1.5px solid var(--border); flex-shrink: 0;
+               display: flex; align-items: center; justify-content: center; font-size: .8rem; transition: all .2s; }
+  .check-item.done .check-box { background: rgba(84,242,131,.18); border-color: var(--neon); color: var(--neon);
+                                box-shadow: 0 0 10px rgba(84,242,131,.35); }
+  .check-item .ct { font-size: .84rem; }
+  .check-item .cs { color: var(--muted); font-size: .72rem; }
+  .check-item.done .ct { color: var(--neon); }
+  .shield-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 8px; }
+  .shield-score { font-size: 1.5rem; font-weight: 800; }
+  .locked { opacity: .75; }
+  .locked .lock-big { font-size: 1.6rem; margin-bottom: 8px; }
+  .insight-card { background: linear-gradient(160deg, var(--glass2), var(--glass)); border: 1px solid var(--border);
+                  border-radius: 14px; padding: 13px 15px; font-size: .87rem; line-height: 1.55; margin-bottom: 10px;
+                  backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
+  .insight-card b { color: var(--cyan); }
+  .insight-card .good { color: var(--neon); font-weight: 600; }
+  .insight-card .warn { color: var(--amber); font-weight: 600; }
+  .gauge-wrap { position: relative; height: 170px; }
+  .gauge-val { position: absolute; left: 0; right: 0; bottom: 14px; text-align: center; font-size: 1.7rem; font-weight: 800; }
+  .gauge-lbl { position: absolute; left: 0; right: 0; bottom: 0; text-align: center; color: var(--muted); font-size: .72rem; }
+  footer { color: var(--muted); font-size: .7rem; text-align: center; margin: 30px 0 8px; }
+  #err { display: none; background: rgba(255,77,109,.12); border: 1px solid rgba(255,77,109,.4); color: #ffd7d7;
+         padding: 10px 14px; border-radius: 12px; margin-bottom: 14px; font-size: .84rem; white-space: pre-wrap; }
+  dialog { background: #10141f; color: var(--text); border: 1px solid var(--border); border-radius: 16px;
            padding: 22px; max-width: 420px; width: 92vw; }
-  dialog::backdrop { background: rgba(0,0,0,.6); }
+  dialog::backdrop { background: rgba(0,0,0,.65); }
   dialog h3 { margin-bottom: 10px; }
-  dialog p { color: var(--muted); font-size: .8rem; line-height: 1.5; margin-bottom: 12px; }
-  dialog label { display: block; font-size: .8rem; color: var(--muted); margin: 10px 0 4px; }
+  dialog p { color: var(--muted); font-size: .78rem; line-height: 1.5; margin-bottom: 12px; }
+  dialog label { display: block; font-size: .78rem; color: var(--muted); margin: 10px 0 4px; }
   dialog input { width: 100%; background: var(--bg); color: var(--text); border: 1px solid var(--border);
-                 border-radius: 8px; padding: 9px 11px; font-size: .9rem; }
+                 border-radius: 9px; padding: 9px 11px; font-size: .9rem; }
   dialog .dlg-btns { display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px; }
 </style>
 </head>
 <body>
 <div class="container">
   <header>
-    <h1>🏃 <span class="orange">Running</span> stats</h1>
+    <h1>🏃 <span class="neon">Running</span> stats</h1>
     <div class="toolbar">
       <button class="btn primary" id="stravaBtn">🔗 Connecter Strava</button>
-      <label class="btn">📥 Importer activities.csv<input type="file" id="fileInput" accept=".csv,text/csv" hidden></label>
-      <button class="btn" id="cfgBtn" title="Identifiants de l'application API Strava">⚙️</button>
-      <button class="btn" id="resetBtn" title="Déconnecter Strava et revenir aux données embarquées">↺</button>
+      <label class="btn">📥 CSV<input type="file" id="fileInput" accept=".csv,text/csv" hidden></label>
+      <button class="btn" id="cfgBtn" title="Identifiants API Strava">⚙️</button>
+      <button class="btn" id="resetBtn" title="Déconnecter et réinitialiser">↺</button>
     </div>
     <div id="importMsg"></div>
   </header>
   <div class="sub" id="subtitle">Chargement…</div>
   <div id="err"></div>
 
-  <div class="kpis" id="kpis"></div>
+  <!-- ================= 🎛️ COCKPIT ================= -->
+  <div class="tab active" id="tab-cockpit">
+    <div class="kpis" id="kpis"></div>
 
-  <h2>🏆 Records personnels</h2>
-  <div class="grid3" id="records"></div>
-  <div class="duel" id="duel" style="display:none"></div>
-
-  <h2>🎯 Prédictions & objectifs</h2>
-  <div class="grid2">
-    <div class="card" id="riegelCard"><h3>Chronos prédits (formule de Riegel)</h3><div id="riegelBody"></div></div>
-    <div class="card"><h3>Projection de l'année en cours</h3><div id="projBody"></div></div>
-  </div>
-
-  <h2>📈 Volume d'entraînement</h2>
-  <div class="grid2">
-    <div class="card"><h3>Kilométrage mensuel & allure moyenne</h3><div class="chart-wrap"><canvas id="cMonthly"></canvas></div></div>
-    <div class="card"><h3>Kilométrage hebdomadaire vs objectif</h3><div class="chart-wrap"><canvas id="cWeekly"></canvas></div>
-      <div class="note" id="weeklyNote"></div></div>
-    <div class="card"><h3>Kilométrage cumulé par année</h3><div class="chart-wrap"><canvas id="cCum"></canvas></div>
-      <div class="note" id="cumNote"></div></div>
-    <div class="card"><h3>Courbe de forme — fitness / fatigue / fraîcheur</h3><div class="chart-wrap"><canvas id="cForm"></canvas></div>
-      <div class="note">Modèle CTL/ATL sur l'effort relatif de <b>toutes</b> les activités : <span style="color:#4cc2ff">fitness</span> = moyenne exponentielle 42 j, <span style="color:#ff4d6d">fatigue</span> = 7 j, <span style="color:#3ddc84">fraîcheur</span> = fitness − fatigue.</div></div>
-    <div class="card"><h3>ACWR — ratio de charge aiguë/chronique (anti-blessure)</h3><div class="chart-wrap"><canvas id="cAcwr"></canvas></div>
-      <div class="note" id="acwrNote"></div></div>
-  </div>
-
-  <h2>⚡ Allure & cardio</h2>
-  <div class="grid2">
-    <div class="card"><h3>Progression de l'allure (courses ≥ 3 km, moyenne mobile 10 sorties)</h3><div class="chart-wrap"><canvas id="cProg"></canvas></div></div>
-    <div class="card"><h3>Allure vs fréquence cardiaque (taille = distance)</h3><div class="chart-wrap"><canvas id="cPaceHr"></canvas></div></div>
-    <div class="card"><h3>Temps par zone cardiaque (FC max observée : <span id="fcmax"></span> bpm)</h3><div class="chart-wrap short"><canvas id="cZones"></canvas></div>
-      <div class="note">Zones estimées à partir de la FC moyenne de chaque sortie rapportée à la FC max observée en course.</div></div>
-    <div class="card"><h3>FC moyenne mensuelle vs allure — efficacité aérobie</h3><div class="chart-wrap short"><canvas id="cEff"></canvas></div></div>
-    <div class="card"><h3>Cadence (pas/min)</h3><div class="chart-wrap short"><canvas id="cCad"></canvas></div>
-      <div class="note" id="cadNote"></div></div>
-  </div>
-
-  <div id="ppmWrap" style="display:none">
-    <h2>👣 Pas par minute — dernières séances</h2>
-    <div class="card" id="ppmEmpty" style="display:none">
-      <h3>Pas de cadence détaillée dans tes enregistrements</h3>
-      <div class="note" style="margin-top:0">Tes activités (app Strava sur téléphone) n'enregistrent pas la cadence en continu —
-      seul le total de pas est compté, dont l'app dérive la cadence <b>moyenne</b> par sortie (voir la carte « Cadence »
-      plus haut). Pour la courbe minute par minute, il faut un capteur qui la mesure : montre GPS de running
-      (Garmin, Coros, Apple Watch…) ou footpod. Dès ta première sortie avec cadence, cette section s'activera automatiquement à la sync.</div>
+    <h2>⚡ Objectif adaptatif de la semaine</h2>
+    <div class="card" id="goalCard">
+      <div id="goalBody"></div>
+      <div class="note">Cible = moyenne des 3 dernières semaines + 10 % (progression sûre), avec l'objectif Strava comme plancher.</div>
     </div>
-    <div id="ppmCharts">
-    <div class="card"><h3>Cadence minute par minute (données capteur Strava)</h3>
-      <div class="chart-wrap"><canvas id="cPpm"></canvas></div>
-      <div class="ppm-chips" id="ppmChips"></div>
-      <div class="note">Cible usuelle : <b>170–180 pas/min</b>. Une cadence plus haute à allure égale = foulées plus courtes, moins d'impact par appui, moins d'overstriding. Pour progresser : +5 spm à la fois (métronome ou playlist au bon BPM), sur des segments de 1–2 min.</div></div>
-    <div class="grid2" style="margin-top:14px">
-      <div class="card"><h3>Temps passé par plage de cadence (séances ci-dessus)</h3>
-        <div class="chart-wrap short"><canvas id="cPpmHist"></canvas></div></div>
-      <div class="card"><h3>Résumé par séance</h3><div class="table-scroll"><table id="tPpm"></table></div></div>
+
+    <h2>🛰️ Dernière sortie</h2>
+    <div class="card" id="lastRunCard"></div>
+
+    <h2>🏆 Le mur des trophées</h2>
+    <div class="grid3" id="records"></div>
+    <div class="duel" id="duel" style="display:none"></div>
+
+    <h2>🏅 Jalons</h2>
+    <div class="badges" id="badges"></div>
+  </div>
+
+  <!-- ================= 🫀 MOTEUR ================= -->
+  <div class="tab" id="tab-moteur">
+    <h2>🫀 Efficacité aérobie</h2>
+    <div class="grid2">
+      <div class="card"><h3>Allure vs fréquence cardiaque (taille = distance)</h3><div class="chart-wrap"><canvas id="cPaceHr"></canvas></div>
+        <div class="note">Le nuage qui glisse vers la gauche (plus rapide) à FC égale = le moteur progresse.</div></div>
+      <div class="card"><h3>FC moyenne mensuelle vs allure — découplage</h3><div class="chart-wrap"><canvas id="cEff"></canvas></div></div>
+      <div class="card"><h3>Temps par zone cardiaque (FC max observée : <span id="fcmax"></span> bpm)</h3><div class="chart-wrap short"><canvas id="cZones"></canvas></div>
+        <div class="note">Zones estimées à partir de la FC moyenne de chaque sortie rapportée à la FC max observée en course.</div></div>
+      <div class="card"><h3>Progression de l'allure (≥ 3 km, moyenne mobile 10 sorties)</h3><div class="chart-wrap"><canvas id="cProg"></canvas></div></div>
     </div>
+
+    <h2>🔮 Prédictions chronométriques</h2>
+    <div class="grid2">
+      <div class="card" id="riegelCard"><h3>Chronos prédits (formule de Riegel)</h3><div id="riegelBody"></div><div id="capsBody"></div></div>
+      <div class="card"><h3>Projection de l'année en cours</h3><div id="projBody"></div></div>
     </div>
   </div>
 
-  <h2>🗓️ Habitudes d'entraînement</h2>
-  <div class="card"><h3>Calendrier des 12 derniers mois</h3>
-    <div class="heat-scroll"><div id="calendar"></div></div>
-    <div class="note" id="calNote"></div></div>
-  <div class="grid2" style="margin-top:14px">
-    <div class="card"><h3>Répartition des distances</h3><div class="chart-wrap short"><canvas id="cHist"></canvas></div></div>
-    <div class="card"><h3>Courses par jour de la semaine</h3><div class="chart-wrap short"><canvas id="cDow"></canvas></div></div>
+  <!-- ================= ⚙️ MÉCANIQUE ================= -->
+  <div class="tab" id="tab-mecanique">
+    <h2>🛡️ Bouclier anti-blessure</h2>
+    <div class="card">
+      <div class="shield-head"><h3 style="margin:0">Routines invisibles de la semaine</h3><div class="shield-score" id="shieldScore">—</div></div>
+      <div class="bar" style="margin-bottom:10px"><div class="bar-fill" id="shieldBar" style="width:0%"></div></div>
+      <div id="checklist"></div>
+      <div class="note">Coche au fil de la semaine (remise à zéro chaque lundi, stocké sur l'appareil). Ces routines protègent genoux et tendons d'Achille pendant les montées de charge.</div>
+    </div>
+
+    <h2>👟 Analyse de la foulée</h2>
+    <div class="grid2">
+      <div class="card"><h3>Matrice cadence × allure</h3><div class="chart-wrap"><canvas id="cMatrix"></canvas></div>
+        <div class="note" id="matrixNote"></div></div>
+      <div class="card"><h3>Cadence par sortie (pas/min)</h3><div class="chart-wrap"><canvas id="cCad"></canvas></div>
+        <div class="note" id="cadNote"></div></div>
+    </div>
+    <div class="card locked" style="margin-top:14px" id="bsiCard">
+      <div class="lock-big">🔒</div>
+      <h3>Index de stress biomécanique (GCT + oscillation verticale)</h3>
+      <div class="note" style="margin-top:4px">Nécessite une montre avec dynamiques de course (temps de contact au sol, oscillation verticale) — Garmin HRM, Coros POD… Tes enregistrements actuels n'ont pas ces capteurs. Dès qu'une activité synchronisée en contiendra, cette tuile s'activera : monitoring GCT/VO et delta de fatigue premier vs dernier kilomètre.</div>
+    </div>
+
+    <div id="ppmWrap" style="display:none">
+      <h2>👣 Pas par minute — dernières séances</h2>
+      <div class="card" id="ppmEmpty" style="display:none">
+        <h3>Pas de cadence détaillée dans tes enregistrements</h3>
+        <div class="note" style="margin-top:0">Tes activités (app Strava sur téléphone) n'enregistrent pas la cadence en continu —
+        seul le total de pas est compté, dont l'app dérive la cadence <b>moyenne</b> par sortie (cartes ci-dessus).
+        Pour la courbe minute par minute : montre GPS de running ou footpod. Dès ta première sortie avec cadence,
+        cette section s'activera automatiquement à la sync.</div>
+      </div>
+      <div id="ppmCharts">
+      <div class="card"><h3>Cadence minute par minute (données capteur Strava)</h3>
+        <div class="chart-wrap"><canvas id="cPpm"></canvas></div>
+        <div class="ppm-chips" id="ppmChips"></div>
+        <div class="note">Cible usuelle : <b>170–180 pas/min</b>. Pour progresser : +5 spm à la fois (métronome ou playlist au bon BPM), sur des segments de 1–2 min.</div></div>
+      <div class="grid2" style="margin-top:14px">
+        <div class="card"><h3>Temps passé par plage de cadence</h3>
+          <div class="chart-wrap short"><canvas id="cPpmHist"></canvas></div></div>
+        <div class="card"><h3>Résumé par séance</h3><div class="table-scroll"><table id="tPpm"></table></div></div>
+      </div>
+      </div>
+    </div>
+
+    <h2>🏎️ Le garage</h2>
+    <div class="grid2">
+      <div class="card"><h3>Usure des chaussures (repère ~600 km)</h3><div id="shoeBars"></div></div>
+      <div class="card"><h3>Kilométrage par paire</h3><div class="chart-wrap short"><canvas id="cGear"></canvas></div>
+        <div class="note">« Sans matériel » = sorties sans chaussure assignée sur Strava.</div></div>
+    </div>
   </div>
-  <div class="card" style="margin-top:14px"><h3>Heatmap jour × heure de départ</h3><div class="heat-scroll"><div class="heat" id="heat"></div></div></div>
 
-  <h2>🌦️ Conditions & matériel</h2>
-  <div class="grid2">
-    <div class="card"><h3>Température vs allure</h3><div class="chart-wrap short"><canvas id="cTemp"></canvas></div>
-      <div class="note">Météo disponible uniquement via l'export CSV (l'API Strava ne la fournit pas).</div></div>
-    <div class="card"><h3>Kilométrage par paire de chaussures</h3><div class="chart-wrap short"><canvas id="cGear"></canvas></div>
-      <div class="note">« Sans matériel » = sorties sans chaussure assignée sur Strava.</div></div>
+  <!-- ================= 📊 CHARGE ================= -->
+  <div class="tab" id="tab-charge">
+    <h2>🚨 Radar de blessure</h2>
+    <div class="grid2">
+      <div class="card"><h3>ACWR — jauge (charge 7 j / 28 j)</h3>
+        <div class="gauge-wrap"><canvas id="cAcwrGauge"></canvas><div class="gauge-val" id="acwrVal">—</div><div class="gauge-lbl">vert 0,8–1,3 · rouge > 1,5</div></div></div>
+      <div class="card"><h3>ACWR — historique</h3><div class="chart-wrap short"><canvas id="cAcwr"></canvas></div>
+        <div class="note" id="acwrNote"></div></div>
+    </div>
+
+    <h2>📉 Courbe de forme</h2>
+    <div class="card"><h3>Fitness (CTL 42 j) / Fatigue (ATL 7 j) / Fraîcheur (TSB)</h3><div class="chart-wrap"><canvas id="cForm"></canvas></div>
+      <div class="note">Modèle CTL/ATL sur l'effort relatif de <b>toutes</b> les activités. Fraîcheur négative = bloc de charge ; positive = récupération/affûtage. Le graphique de référence pour viser un pic de forme le jour d'une course.</div></div>
+
+    <h2>📈 Volume & régularité</h2>
+    <div class="card" style="margin-bottom:14px"><h3>Calendrier des 12 derniers mois</h3>
+      <div class="heat-scroll"><div id="calendar"></div></div>
+      <div class="note" id="calNote"></div></div>
+    <div class="grid2">
+      <div class="card"><h3>Kilométrage mensuel & allure moyenne</h3><div class="chart-wrap"><canvas id="cMonthly"></canvas></div></div>
+      <div class="card"><h3>Kilométrage hebdomadaire vs objectif</h3><div class="chart-wrap"><canvas id="cWeekly"></canvas></div>
+        <div class="note" id="weeklyNote"></div></div>
+      <div class="card"><h3>Cumulé par année — à date égale</h3><div class="chart-wrap"><canvas id="cCum"></canvas></div>
+        <div class="note" id="cumNote"></div></div>
+      <div class="card"><h3>Répartition des distances</h3><div class="chart-wrap short"><canvas id="cHist"></canvas></div></div>
+      <div class="card"><h3>Courses par jour de la semaine</h3><div class="chart-wrap short"><canvas id="cDow"></canvas></div></div>
+      <div class="card"><h3>Température vs allure</h3><div class="chart-wrap short"><canvas id="cTemp"></canvas></div>
+        <div class="note">Météo issue de l'export CSV (l'API Strava ne la fournit pas).</div></div>
+    </div>
+    <div class="card" style="margin-top:14px"><h3>Heatmap des habitudes — jour × heure de départ</h3><div class="heat-scroll"><div class="heat" id="heat"></div></div></div>
+
+    <h2>📅 Bilans</h2>
+    <div class="grid2">
+      <div class="card"><h3>Comparaison annuelle</h3><div class="table-scroll"><table id="tYear"></table></div>
+        <div class="note">Année en cours : données jusqu'au <span id="lastRun"></span>.</div></div>
+      <div class="card"><h3>Toutes les activités</h3><div class="table-scroll"><table id="tOther"></table></div></div>
+    </div>
+    <div class="card table-scroll" style="margin-top:14px"><h3>Top 10 des sorties les plus longues</h3><table id="tTop"></table></div>
   </div>
-  <div class="card" style="margin-top:14px"><h3>Usure des chaussures (repère ~600 km)</h3><div id="shoeBars"></div></div>
 
-  <h2>🏅 Jalons</h2>
-  <div class="badges" id="badges"></div>
-
-  <h2>📅 Bilan par année & autres sports</h2>
-  <div class="grid2">
-    <div class="card"><h3>Comparaison annuelle</h3><div class="table-scroll"><table id="tYear"></table></div>
-      <div class="note">Année en cours : données jusqu'au <span id="lastRun"></span>.</div></div>
-    <div class="card"><h3>Toutes les activités</h3><div class="table-scroll"><table id="tOther"></table></div></div>
+  <!-- ================= 🧠 LAB ================= -->
+  <div class="tab" id="tab-lab">
+    <h2>🧠 Le feed d'insights</h2>
+    <div id="insights"></div>
+    <div class="card" style="margin-top:18px"><h3>Comment c'est calculé</h3>
+      <div class="note" style="margin-top:0">Généré à chaque synchronisation à partir de tes données : duel sur course de référence, volume et cumul à date égale, forme CTL/TSB, ACWR croisé avec ton bouclier de renforcement, répartition cardio, signature de cadence, habitudes, usure du matériel. Aucune donnée n'est envoyée à un serveur — tout est calculé dans le navigateur.</div></div>
   </div>
-
-  <h2>🔟 Top 10 des sorties les plus longues</h2>
-  <div class="card table-scroll"><table id="tTop"></table></div>
-
-  <h2>🧠 Interprétation & conseils</h2>
-  <div class="card insights" id="insights"></div>
 
   <footer id="footer"></footer>
 </div>
 
+<!-- Tab bar -->
+<nav class="tabbar">
+  <button class="tabbtn active" data-tab="tab-cockpit"><span class="ti">🎛️</span>Cockpit</button>
+  <button class="tabbtn" data-tab="tab-moteur"><span class="ti">🫀</span>Moteur</button>
+  <button class="tabbtn" data-tab="tab-mecanique"><span class="ti">⚙️</span>Mécanique</button>
+  <button class="tabbtn" data-tab="tab-charge"><span class="ti">📊</span>Charge</button>
+  <button class="tabbtn" data-tab="tab-lab"><span class="ti">🧠</span>Lab</button>
+</nav>
+
 <dialog id="cfgDlg">
   <h3>⚙️ Application API Strava</h3>
-  <p>Crée ton application sur <b>strava.com/settings/api</b> (catégorie libre,
-     « Authorization Callback Domain » = le domaine de cette page, par ex. <b>cosmin332.github.io</b>),
-     puis recopie les identifiants ci-dessous. Ils sont stockés sur cet appareil
+  <p>Crée ton application sur <b>strava.com/settings/api</b> (« Authorization Callback Domain » = le domaine de cette page,
+     par ex. <b>cosmin332.github.io</b>), puis recopie les identifiants. Stockés sur cet appareil
      (ou dans <b>config.js</b> du dépôt pour tous les appareils).</p>
   <form method="dialog">
     <label for="cfgId">Client ID</label>

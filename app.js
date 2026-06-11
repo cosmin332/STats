@@ -3,10 +3,11 @@
 (function () {
   'use strict';
 
-  const APP_VERSION = '8'; // affichée en pied de page — incrémenter à chaque déploiement
+  const APP_VERSION = '9'; // affichée en pied de page — incrémenter à chaque déploiement
 
-  const C = { orange: '#fc5200', blue: '#4cc2ff', green: '#3ddc84', yellow: '#ffd166',
-    purple: '#b388ff', red: '#ff4d6d', muted: '#8a93a6', grid: '#262e40' };
+  // Palette cyberpunk : cyan = primaire, magenta = tendances/records, néon = succès
+  const C = { orange: '#22d3ee', blue: '#ff2d95', green: '#54f283', yellow: '#ffd166',
+    purple: '#a78bfa', red: '#ff4d6d', muted: '#7d8aa3', grid: 'rgba(255,255,255,.07)' };
   Chart.defaults.color = C.muted;
   Chart.defaults.borderColor = C.grid;
   Chart.defaults.font.family = '-apple-system, "Segoe UI", Roboto, sans-serif';
@@ -228,7 +229,7 @@
     showCard('cZones', zoneVals.some(v => v > 0));
     if (zoneVals.some(v => v > 0)) mk('cZones', { type: 'doughnut', data: {
       labels: Object.keys(D.zones),
-      datasets: [{ data: zoneVals, backgroundColor: ['#4cc2ff', '#3ddc84', '#ffd166', '#fc5200', '#ff4d6d'], borderWidth: 0 }] },
+      datasets: [{ data: zoneVals, backgroundColor: ['#22d3ee', '#54f283', '#ffd166', '#ff2d95', '#ff4d6d'], borderWidth: 0 }] },
       options: { maintainAspectRatio: false, plugins: { legend: { position: 'right' }, tooltip: { callbacks: { label: ctx => ctx.label + ' : ' + ctx.parsed + ' h' } } } }
     });
 
@@ -421,8 +422,208 @@
     if (wornShoe) ins.push(`<li><b>Matériel :</b> <span class="warn">${wornShoe.name} approche des ${SHOE_LIFE_KM} km</span> (${wornShoe.km} km) — pense au remplacement.</li>`);
     const weights = D.other.find(o => o.type === 'Entraînement aux poids');
     if (weights) ins.push(`<li><b>Renforcement :</b> ${weights.n} séances (≈ ${weights.hours} h) — excellent complément, à maintenir pendant les blocs de course.</li>`);
-    $('insights').innerHTML = '<ul>' + ins.join('') + '</ul>';
+
+    // Croisement ACWR × bouclier anti-blessure
+    const shield = shieldScore();
+    if (acwrPts.length && shield !== null) {
+      const cur = acwrPts[acwrPts.length - 1].ratio;
+      if (cur > 1.3 && shield >= 80) ins.push(`<li><b>Charge × bouclier :</b> ACWR à <span class="warn">${cur}</span> mais bouclier de renforcement à <span class="good">${shield} %</span> — la structure tient, allège quand même légèrement la prochaine sortie.</li>`);
+      else if (cur > 1.3 && shield < 50) ins.push(`<li><b>Charge × bouclier :</b> <span class="warn">ACWR à ${cur} ET bouclier à ${shield} %</span> — combinaison à risque pour genoux/tendons. Priorité aux routines de renforcement cette semaine.</li>`);
+    }
+    // Signature de cadence : corrélation cadence/allure
+    const cp = D.runs.filter(r => r.cad && r.pace);
+    if (cp.length > 15) {
+      const mx = cp.reduce((s, r) => s + r.pace, 0) / cp.length, my = cp.reduce((s, r) => s + r.cad, 0) / cp.length;
+      let num = 0, dx = 0, dy = 0;
+      for (const r of cp) { num += (r.pace - mx) * (r.cad - my); dx += (r.pace - mx) ** 2; dy += (r.cad - my) ** 2; }
+      const corr = dx && dy ? num / Math.sqrt(dx * dy) : 0;
+      if (Math.abs(corr) < 0.3) ins.push(`<li><b>Signature de foulée :</b> ta cadence reste <span class="warn">scotchée autour de ${Math.round(my)} pas/min quelle que soit l'allure</span> — tu accélères en allongeant la foulée (sur-enjambement probable). Travail au métronome conseillé : +5 spm par palier.</li>`);
+      else if (corr < -0.3) ins.push(`<li><b>Signature de foulée :</b> ta cadence monte bien quand l'allure accélère (corrélation saine) — continue à la tirer vers 170+ sur les sorties faciles aussi.</li>`);
+    }
+
+    $('insights').innerHTML = ins.map(x => `<div class="insight-card">${x.replace(/^<li>/, '').replace(/<\/li>$/, '')}</div>`).join('');
+
+    renderExtras(D, acwrPts);
   }
+
+  // ---------- Extras : jauge objectif, dernière sortie, caps, matrice, jauge ACWR ----------
+  function renderExtras(D, acwrPts) {
+    const g = D.global;
+
+    // Objectif adaptatif : semaine en cours vs moyenne des 3 précédentes + 10 % (plancher = objectif Strava)
+    (function () {
+      const w = D.weekly;
+      if (w.length < 2) { $('goalBody').innerHTML = ''; return; }
+      const cur = w[w.length - 1];
+      const prev = w.slice(-4, -1);
+      const avg = prev.length ? prev.reduce((s, x) => s + x.km, 0) / prev.length : 0;
+      const target = Math.max(cur.goal, Math.round(avg * 1.1 * 10) / 10);
+      const pct = Math.min(100, Math.round(100 * cur.km / Math.max(target, 0.1)));
+      $('goalBody').innerHTML = `
+        <div class="proj-row">
+          <div class="proj-col"><div class="pv">${cur.km} km</div><div class="pl">cette semaine (${cur.n} sortie${cur.n > 1 ? 's' : ''})</div></div>
+          <div class="proj-col"><div class="pv" style="color:var(--neon)">${target} km</div><div class="pl">cible adaptative (moy. 3 sem. ${avg.toFixed(1)} km + 10 %)</div></div>
+        </div>
+        <div class="bar"><div class="bar-fill" style="width:${pct}%"></div></div>
+        <div class="note">${pct} % de la cible. ${pct >= 100 ? '<span class="good">Semaine validée 🎉</span>' : `Encore ${(target - cur.km).toFixed(1)} km.`}</div>`;
+    })();
+
+    // Dernière sortie + facteur d'impact météo
+    (function () {
+      const r = D.runs[D.runs.length - 1];
+      if (!r) { $('lastRunCard').innerHTML = ''; return; }
+      let meteo = '';
+      if (r.temp !== null && r.temp !== undefined) {
+        // pénalité chaleur : ~1,5 s/km par °C au-dessus de 15 °C (+0,5 si humidité > 60 %)
+        const over = Math.max(0, r.temp - 15);
+        const penalty = Math.round(over * (1.5 + (r.humidity && r.humidity > 60 ? 0.5 : 0)));
+        if (penalty > 4) {
+          const adj = r.pace - penalty / 60;
+          meteo = `<div class="lastrun-line"><span>🌡️ ${r.temp} °C${r.humidity ? ' · ' + r.humidity + ' % hum.' : ''} → allure ajustée chaleur : <b>${fmtPace(adj)}/km</b> (−${penalty} s/km de pénalité estimée)</span></div>`;
+        } else {
+          meteo = `<div class="lastrun-line"><span>🌡️ ${r.temp} °C — conditions neutres, pas d'ajustement.</span></div>`;
+        }
+      }
+      $('lastRunCard').innerHTML = `
+        <h3>${r.name} <span style="color:var(--muted);font-weight:400;font-size:.8rem">· ${r.date}</span></h3>
+        <div class="lastrun-line">
+          <span>📏 <b>${r.km} km</b></span><span>⏱️ <b>${r.time}</b></span><span>⚡ <b>${r.pace_str}/km</b></span>
+          ${r.hr ? `<span>❤️ <b>${Math.round(r.hr)} bpm</b></span>` : ''}
+          ${r.cad ? `<span>👣 <b>${r.cad} spm</b></span>` : ''}
+          ${r.dplus ? `<span>⛰️ <b>${r.dplus} m D+</b></span>` : ''}
+        </div>${meteo}`;
+    })();
+
+    // Caps symboliques (sub-X) depuis les prédictions Riegel
+    (function () {
+      if (!D.riegel || !D.riegel.length) { $('capsBody').innerHTML = ''; return; }
+      const CAPS = { 5000: [20, 22.5, 25, 27.5, 30], 10000: [40, 45, 50, 55, 60, 65],
+        20000: [90, 100, 105, 110, 115, 120, 130], 21097.5: [95, 105, 110, 120, 125, 130, 140] };
+      const caps = [];
+      for (const r of D.riegel) {
+        const pred = r.time_s / 60;
+        const next = (CAPS[r.dist] || []).filter(c => c < pred).pop();
+        if (next === undefined) continue;
+        const gapSk = Math.round((r.time_s - next * 60) / (r.dist / 1000));
+        caps.push(`<span class="cap">${r.label} : sub-${next >= 60 ? Math.floor(next / 60) + 'h' + String(next % 60).padStart(2, '0') : next + ' min'} → ${gapSk} s/km à gagner</span>`);
+      }
+      $('capsBody').innerHTML = caps.length ? `<div class="caps">${caps.join('')}</div>` : '';
+    })();
+
+    // Matrice cadence × allure (traque le sur-enjambement)
+    (function () {
+      const pts = D.runs.filter(r => r.cad && r.pace);
+      showCard('cMatrix', pts.length > 9);
+      if (pts.length <= 9) return;
+      // régression linéaire cad = a*pace + b
+      const mx = pts.reduce((s, r) => s + r.pace, 0) / pts.length, my = pts.reduce((s, r) => s + r.cad, 0) / pts.length;
+      let num = 0, den = 0;
+      for (const r of pts) { num += (r.pace - mx) * (r.cad - my); den += (r.pace - mx) ** 2; }
+      const a = den ? num / den : 0, b = my - a * mx;
+      const xs = pts.map(r => r.pace), x1 = Math.min(...xs), x2 = Math.max(...xs);
+      mk('cMatrix', { data: { datasets: [
+          { type: 'scatter', label: 'sortie',
+            data: pts.map(r => ({ x: r.pace, y: r.cad, km: r.km, name: r.name, date: r.date, pace: r.pace_str })),
+            backgroundColor: C.orange + '88', pointRadius: 4, hoverRadius: 6 },
+          { type: 'line', label: 'tendance', data: [{ x: x1, y: a * x1 + b }, { x: x2, y: a * x2 + b }],
+            borderColor: C.blue, borderDash: [6, 4], borderWidth: 2, pointRadius: 0 },
+          { type: 'line', label: 'cible 170', data: [{ x: x1, y: 170 }, { x: x2, y: 170 }],
+            borderColor: C.green + '88', borderDash: [3, 4], borderWidth: 1, pointRadius: 0 }
+        ] },
+        options: { maintainAspectRatio: false, interaction: { mode: 'nearest', intersect: false }, scales: {
+          x: { reverse: true, ticks: { callback: fmtPace }, title: { display: true, text: 'allure (→ plus rapide)' } },
+          y: { title: { display: true, text: 'pas/min' } }
+        }, plugins: { tooltip: { callbacks: {
+          title: ctx => ctx[0].datasetIndex === 0 ? ctx[0].raw.name : '',
+          label: ctx => ctx.datasetIndex === 0
+            ? [`${ctx.raw.date} · ${ctx.raw.km} km`, `allure ${ctx.raw.pace}/km`, `cadence ${ctx.parsed.y} pas/min`]
+            : null
+        } } } }
+      });
+      const slope = -a; // allure inversée : pente positive = cadence monte quand ça accélère
+      $('matrixNote').innerHTML = slope > 2
+        ? `Pente : <span style="color:var(--neon)">+${slope.toFixed(1)} spm par min/km gagnée</span> — ta cadence accompagne l'accélération, bon signe.`
+        : `Pente : <span style="color:var(--amber)">${slope > 0 ? '+' : ''}${slope.toFixed(1)} spm par min/km gagnée</span> — tu accélères surtout en allongeant la foulée (sur-enjambement) : la cadence devrait grimper davantage avec la vitesse.`;
+    })();
+
+    // Jauge ACWR (demi-cercle 0 → 2)
+    (function () {
+      const has = acwrPts && acwrPts.length;
+      showCard('cAcwrGauge', !!has);
+      if (!has) return;
+      const cur = Math.min(2, acwrPts[acwrPts.length - 1].ratio);
+      const col = cur > 1.5 ? C.red : cur > 1.3 || cur < 0.8 ? C.yellow : C.green;
+      mk('cAcwrGauge', { type: 'doughnut', data: {
+        datasets: [
+          { data: [0.8, 0.5, 0.2, 0.5], backgroundColor: ['rgba(125,138,163,.35)', 'rgba(84,242,131,.75)', 'rgba(255,209,102,.75)', 'rgba(255,77,109,.8)'],
+            borderWidth: 0, circumference: 180, rotation: 270, cutout: '72%' },
+          { data: [cur, 2 - cur], backgroundColor: [col, 'rgba(255,255,255,.05)'],
+            borderWidth: 0, circumference: 180, rotation: 270, cutout: '88%' }
+        ] },
+        options: { maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { enabled: false } } }
+      });
+      const el = $('acwrVal');
+      el.textContent = acwrPts[acwrPts.length - 1].ratio;
+      el.style.color = col;
+      el.style.textShadow = `0 0 16px ${col}`;
+    })();
+  }
+
+  // ---------- Bouclier anti-blessure (checklist hebdo, localStorage) ----------
+  const CHECKLIST = [
+    ['🦵', 'Mollets excentriques', '3×15 par jambe, sur une marche'],
+    ['🧱', 'Gainage / core', '2 séries de planches + latérales'],
+    ['🦶', 'Squats unijambistes', '3×8 par jambe, contrôle du genou'],
+    ['🧘', 'Mobilité hanches/chevilles', '10 min'],
+    ['🐢', 'Une vraie sortie facile', 'FC < 70 % FCmax, conversation possible'],
+    ['📏', 'Sortie longue progressive', 'la plus longue de la semaine en aisance'],
+  ];
+  const mondayKey = () => {
+    const d = new Date(); d.setDate(d.getDate() - (d.getDay() + 6) % 7);
+    return 'shield_' + d.toISOString().slice(0, 10);
+  };
+  function shieldState() { try { return JSON.parse(localStorage.getItem(mondayKey())) || {}; } catch (e) { return {}; } }
+  function shieldScore() {
+    const st = shieldState();
+    const n = CHECKLIST.filter((_, i) => st[i]).length;
+    return Math.round(100 * n / CHECKLIST.length);
+  }
+  function renderChecklist() {
+    const st = shieldState();
+    $('checklist').innerHTML = CHECKLIST.map(([icon, t, s], i) => `
+      <div class="check-item ${st[i] ? 'done' : ''}" data-i="${i}">
+        <div class="check-box">${st[i] ? '✓' : ''}</div>
+        <div>${icon} <span class="ct">${t}</span><div class="cs">${s}</div></div>
+      </div>`).join('');
+    const score = shieldScore();
+    $('shieldScore').textContent = score + ' %';
+    $('shieldScore').style.color = score >= 80 ? 'var(--neon)' : score >= 50 ? 'var(--amber)' : 'var(--red)';
+    $('shieldBar').style.width = score + '%';
+    $('shieldBar').style.background = score >= 80 ? 'linear-gradient(90deg,#54f283,#a7f3d0)' : score >= 50 ? 'linear-gradient(90deg,#ffd166,#fde68a)' : 'linear-gradient(90deg,#ff4d6d,#ff8fa3)';
+  }
+  $('checklist').addEventListener('click', ev => {
+    const item = ev.target.closest('.check-item');
+    if (!item) return;
+    const st = shieldState();
+    st[item.dataset.i] = !st[item.dataset.i];
+    localStorage.setItem(mondayKey(), JSON.stringify(st));
+    renderChecklist();
+  });
+
+  // ---------- Onglets ----------
+  document.querySelectorAll('.tabbtn').forEach(btn => btn.addEventListener('click', () => {
+    document.querySelectorAll('.tabbtn').forEach(b => b.classList.toggle('active', b === btn));
+    document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.id === btn.dataset.tab));
+    requestAnimationFrame(() => { charts.concat(ppmCharts).forEach(c => { try { c.resize(); } catch (e) {} }); });
+    window.scrollTo({ top: 0 });
+  }));
+  // ouverture directe d'un onglet via #tab-xxx (différé : déclarations plus bas pas encore évaluées)
+  setTimeout(() => {
+    if (/^#tab-/.test(location.hash)) {
+      const btn = document.querySelector(`.tabbtn[data-tab="${location.hash.slice(1)}"]`);
+      if (btn) btn.click();
+    }
+  }, 0);
 
   // ---------- Pas par minute (streams API Strava) ----------
   let ppmCharts = [];
@@ -475,7 +676,7 @@
     }
     ppmCharts.push(new Chart($('cPpmHist'), { type: 'bar', data: { labels: bins,
       datasets: [{ data: counts.map(c => Math.round(100 * c / total)),
-        backgroundColor: ['#ff4d6d', '#ffd166', '#ffd166', '#3ddc84', '#3ddc84', '#4cc2ff'].map(c => c + 'cc'), borderRadius: 6 }] },
+        backgroundColor: ['#ff4d6d', '#ffd166', '#ffd166', '#54f283', '#54f283', '#22d3ee'].map(c => c + 'cc'), borderRadius: 6 }] },
       options: { maintainAspectRatio: false, plugins: { legend: { display: false },
         tooltip: { callbacks: { label: ctx => ctx.parsed.y + ' % du temps' } } },
         scales: { y: { title: { display: true, text: '% du temps' } } } }
@@ -606,6 +807,8 @@
       .then(t => render(computeData(t), 'du dépôt'))
       .catch(e => { $('subtitle').textContent = 'Aucune donnée : connecte Strava (🔗) ou importe un activities.csv (📥). (' + e.message + ')'; });
   }
+
+  renderChecklist();
 
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('./sw.js').catch(e => console.warn('SW non enregistré :', e));
