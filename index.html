@@ -172,6 +172,14 @@
 
   <div id="ppmWrap" style="display:none">
     <h2>👣 Pas par minute — dernières séances</h2>
+    <div class="card" id="ppmEmpty" style="display:none">
+      <h3>Pas de cadence détaillée dans tes enregistrements</h3>
+      <div class="note" style="margin-top:0">Tes activités (app Strava sur téléphone) n'enregistrent pas la cadence en continu —
+      seul le total de pas est compté, dont l'app dérive la cadence <b>moyenne</b> par sortie (voir la carte « Cadence »
+      plus haut). Pour la courbe minute par minute, il faut un capteur qui la mesure : montre GPS de running
+      (Garmin, Coros, Apple Watch…) ou footpod. Dès ta première sortie avec cadence, cette section s'activera automatiquement à la sync.</div>
+    </div>
+    <div id="ppmCharts">
     <div class="card"><h3>Cadence minute par minute (données capteur Strava)</h3>
       <div class="chart-wrap"><canvas id="cPpm"></canvas></div>
       <div class="ppm-chips" id="ppmChips"></div>
@@ -180,6 +188,7 @@
       <div class="card"><h3>Temps passé par plage de cadence (séances ci-dessus)</h3>
         <div class="chart-wrap short"><canvas id="cPpmHist"></canvas></div></div>
       <div class="card"><h3>Résumé par séance</h3><div class="table-scroll"><table id="tPpm"></table></div></div>
+    </div>
     </div>
   </div>
 

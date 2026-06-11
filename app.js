@@ -3,7 +3,7 @@
 (function () {
   'use strict';
 
-  const APP_VERSION = '5'; // affichée en pied de page — incrémenter à chaque déploiement
+  const APP_VERSION = '6'; // affichée en pied de page — incrémenter à chaque déploiement
 
   const C = { orange: '#fc5200', blue: '#4cc2ff', green: '#3ddc84', yellow: '#ffd166',
     purple: '#b388ff', red: '#ff4d6d', muted: '#8a93a6', grid: '#262e40' };
@@ -262,7 +262,7 @@
           y: { title: { display: true, text: 'pas/min' } }
         }, plugins: { tooltip: { callbacks: { label: ctx => `${ctx.parsed.y} spm${ctx.raw.km ? ' · ' + ctx.raw.km + ' km' : ''}` } } } }
       });
-      $('cadNote').textContent = `Cadence moyenne : ${g.avg_cad} pas/min. Repère usuel : 170–180 spm ; une cadence plus haute à allure égale réduit l'impact par foulée.`;
+      $('cadNote').textContent = `Cadence moyenne : ${g.avg_cad} pas/min${g.cad_derived ? ' (estimée : nombre de pas ÷ durée, pas de capteur de cadence sur tes enregistrements)' : ''}. Repère usuel : 170–180 spm ; une cadence plus haute à allure égale réduit l'impact par foulée et l'overstriding.`;
     }
 
     // ---- Histogramme ----
@@ -423,8 +423,18 @@
     ppmCharts.forEach(c => c.destroy());
     ppmCharts = [];
     const wrap = $('ppmWrap');
-    if (!sessions || !sessions.length) { wrap.style.display = 'none'; return; }
+    if (!sessions || !sessions.length) {
+      // Connecté et synchronisé mais aucune cadence : on explique pourquoi au lieu de masquer
+      if (window.Strava && Strava.isConnected() && Strava.hasCache()) {
+        wrap.style.display = '';
+        $('ppmEmpty').style.display = '';
+        $('ppmCharts').style.display = 'none';
+      } else wrap.style.display = 'none';
+      return;
+    }
     wrap.style.display = '';
+    $('ppmEmpty').style.display = 'none';
+    $('ppmCharts').style.display = '';
 
     const fmtD = d => d ? d.slice(8, 10) + '/' + d.slice(5, 7) : '?';
     const cols = [C.orange, C.blue, C.green, C.purple, C.yellow, C.red];

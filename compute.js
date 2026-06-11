@@ -103,13 +103,20 @@
       if (r.length < 90) continue;
       const dt = parseDate(r[I.date]);
       if (!dt) continue;
+      // cadence absente (app Strava téléphone) -> dérivée des pas : spm = pas/min, stockée par jambe (÷2)
+      let cad = f(r[I.cad_avg]), cadDerived = false;
+      const steps = f(r[I.steps]), moving = f(r[I.moving]);
+      if (cad === null && steps && moving && r[I.type] === 'Course à pied') {
+        const spm = steps / (moving / 60);
+        if (spm >= 120 && spm <= 220) { cad = spm / 2; cadDerived = true; } // hors plage = pas corrompus
+      }
       acts.push({
         id: r[I.id], date: dt, name: r[I.name], type: r[I.type],
         gear: r[I.gear] || null,
-        elapsed: f(r[I.elapsed]), moving: f(r[I.moving]), dist: f(r[I.dist_m]),
+        elapsed: f(r[I.elapsed]), moving, dist: f(r[I.dist_m]),
         vavg: f(r[I.vavg]), vmax: f(r[I.vmax]),
         dplus: f(r[I.dplus]), dminus: f(r[I.dminus]),
-        cad: f(r[I.cad_avg]), cad_max: f(r[I.cad_max]),
+        cad, cadDerived, cad_max: f(r[I.cad_max]),
         hr: f(r[I.hr_avg]), hr_max: f(r[I.hr_max]),
         cal: f(r[I.cal]), effort: f(r[I.rel_effort]),
         temp: f(r[I.temp]), humidity: f(r[I.humidity]),
@@ -178,6 +185,7 @@
       median_pace: fmtPace(median(runs.map(pace))),
       avg_hr: hrs.length ? round(mean(hrs), 1) : null,
       avg_cad: cads.length ? Math.round(mean(cads) * 2) : null,
+      cad_derived: runs.filter(a => a.cad && a.cadDerived).length > runs.filter(a => a.cad).length / 2,
       first_run: ymd(runs[0].date),
       last_run: ymd(runs[runs.length - 1].date),
       span_days: spanDays,
