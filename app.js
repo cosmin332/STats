@@ -3,7 +3,7 @@
 (function () {
   'use strict';
 
-  const APP_VERSION = '9'; // affichée en pied de page — incrémenter à chaque déploiement
+  const APP_VERSION = '10'; // affichée en pied de page — incrémenter à chaque déploiement
 
   // Palette cyberpunk : cyan = primaire, magenta = tendances/records, néon = succès
   const C = { orange: '#22d3ee', blue: '#ff2d95', green: '#54f283', yellow: '#ffd166',
