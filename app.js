@@ -3,7 +3,7 @@
 (function () {
   'use strict';
 
-  const APP_VERSION = '7'; // affichée en pied de page — incrémenter à chaque déploiement
+  const APP_VERSION = '8'; // affichée en pied de page — incrémenter à chaque déploiement
 
   const C = { orange: '#fc5200', blue: '#4cc2ff', green: '#3ddc84', yellow: '#ffd166',
     purple: '#b388ff', red: '#ff4d6d', muted: '#8a93a6', grid: '#262e40' };
@@ -254,13 +254,20 @@
         return { x: r.date, y: Math.round(win.reduce((s, x) => s + x.cad, 0) / win.length) };
       });
       mk('cCad', { data: { datasets: [
-          { type: 'scatter', label: 'sortie', data: cadRuns.map(r => ({ x: r.date, y: r.cad, km: r.km })), backgroundColor: C.green + '88', pointRadius: 3.5 },
+          { type: 'scatter', label: 'sortie',
+            data: cadRuns.map(r => ({ x: r.date, y: r.cad, km: r.km, name: r.name, pace: r.pace_str, date: r.date })),
+            backgroundColor: C.green + '88', pointRadius: 4, hoverRadius: 6 },
           { type: 'line', label: 'moyenne mobile (10)', data: ma, borderColor: C.blue, pointRadius: 0, tension: .35, borderWidth: 2.5 }
         ] },
-        options: { maintainAspectRatio: false, scales: {
+        options: { maintainAspectRatio: false, interaction: { mode: 'nearest', intersect: false }, scales: {
           x: { type: 'time', time: { unit: 'month' }, ticks: { maxTicksLimit: 14 } },
           y: { title: { display: true, text: 'pas/min' } }
-        }, plugins: { tooltip: { callbacks: { label: ctx => `${ctx.parsed.y} spm${ctx.raw.km ? ' · ' + ctx.raw.km + ' km' : ''}` } } } }
+        }, plugins: { tooltip: { callbacks: {
+          title: ctx => ctx[0].dataset.type === 'scatter' || ctx[0].datasetIndex === 0 ? `${ctx[0].raw.name || ''}` : '',
+          label: ctx => ctx.datasetIndex === 0
+            ? [`${ctx.raw.date} · ${ctx.raw.km} km`, `allure ${ctx.raw.pace}/km`, `cadence ${ctx.parsed.y} pas/min`]
+            : `moyenne mobile : ${ctx.parsed.y} pas/min`
+        } } } }
       });
       $('cadNote').textContent = `Cadence moyenne : ${g.avg_cad} pas/min${g.cad_derived ? ' (estimée : nombre de pas ÷ durée, pas de capteur de cadence sur tes enregistrements)' : ''}. Repère usuel : 170–180 spm ; une cadence plus haute à allure égale réduit l'impact par foulée et l'overstriding.`;
     }
