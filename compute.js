@@ -438,7 +438,32 @@
     };
   }
 
+  // Enrichit les activités API avec les champs présents uniquement dans l'export CSV
+  // (pas/cadence dérivée, météo, calories mesurées, charge), croisés par ID d'activité.
+  function mergeCsvIntoActs(acts, csvActs) {
+    const byId = new Map(csvActs.map(a => [String(a.id), a]));
+    for (const a of acts) {
+      const c = byId.get(String(a.id));
+      if (!c) continue;
+      if (a.cad === null && c.cad !== null) { a.cad = c.cad; a.cadDerived = c.cadDerived; }
+      for (const k of ['temp', 'humidity', 'wind', 'meteo', 'steps', 'load', 'intensity', 'gap_speed', 'dminus']) {
+        if ((a[k] === null || a[k] === undefined) && c[k] !== null && c[k] !== undefined) a[k] = c[k];
+      }
+      if (c.cal !== null) a.cal = c.cal;          // calories de l'export plus fiables que l'estimation
+      if (a.effort === null && c.effort !== null) a.effort = c.effort;
+      if (!a.gear && c.gear) a.gear = c.gear;
+    }
+    return acts;
+  }
+
   const G = typeof window !== 'undefined' ? window : globalThis;
   G.computeData = csvText => computeFromActs(csvToActs(csvText));
-  G.computeFromStrava = (apiActs, gearNames) => computeFromActs(stravaToActs(apiActs, gearNames));
+  G.computeFromStrava = (apiActs, gearNames, csvText) => {
+    let acts = stravaToActs(apiActs, gearNames);
+    if (csvText) {
+      try { acts = mergeCsvIntoActs(acts, csvToActs(csvText)); }
+      catch (e) { /* CSV illisible : on garde les données API seules */ }
+    }
+    return computeFromActs(acts);
+  };
 })();

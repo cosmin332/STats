@@ -3,7 +3,7 @@
 (function () {
   'use strict';
 
-  const APP_VERSION = '6'; // affichée en pied de page — incrémenter à chaque déploiement
+  const APP_VERSION = '7'; // affichée en pied de page — incrémenter à chaque déploiement
 
   const C = { orange: '#fc5200', blue: '#4cc2ff', green: '#3ddc84', yellow: '#ffd166',
     purple: '#b388ff', red: '#ff4d6d', muted: '#8a93a6', grid: '#262e40' };
@@ -504,10 +504,21 @@
     else { btn.textContent = '🔗 Connecter Strava'; btn.title = 'Autoriser l\'accès à ton compte Strava'; }
   }
 
+  // CSV d'enrichissement : celui importé par l'utilisateur, sinon celui du dépôt
+  async function getCsvText() {
+    const saved = localStorage.getItem(LS_CSV);
+    if (saved) return saved;
+    try {
+      const r = await fetch('./activities.csv');
+      if (r.ok) return await r.text();
+    } catch (e) { /* hors-ligne sans cache */ }
+    return null;
+  }
+
   async function doSync() {
     try {
       const { acts, gear } = await Strava.sync(msg);
-      render(computeFromStrava(acts, gear), 'Strava du ' + Strava.cachedDate());
+      render(computeFromStrava(acts, gear, await getCsvText()), 'Strava du ' + Strava.cachedDate());
       try { renderStreams(await Strava.syncStreams(acts, 6, msg)); }
       catch (e) { console.warn('streams cadence :', e); }
       msg(`✅ ${acts.length} activités synchronisées depuis Strava`);
@@ -573,7 +584,7 @@
       if (await Strava.handleRedirect()) { msg('Connecté à Strava ✓'); await doSync(); return; }
     } catch (e) { msg('❌ ' + e.message); }
     if (Strava.isConnected() && Strava.hasCache()) {
-      render(computeFromStrava(Strava.cached(), Strava.cachedGear()), 'Strava du ' + Strava.cachedDate());
+      render(computeFromStrava(Strava.cached(), Strava.cachedGear(), await getCsvText()), 'Strava du ' + Strava.cachedDate());
       renderStreams(Strava.cachedStreams());
       return;
     }
