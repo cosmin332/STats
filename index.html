@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>🏃 Running — Cosmin</title>
+<meta name="theme-color" content="#0e1117">
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="icon" href="./icons/icon-192.png">
+<link rel="apple-touch-icon" href="./icons/icon-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Running">
+<script src="./vendor/chart.umd.min.js"></script>
+<script src="./vendor/chartjs-adapter-date-fns.bundle.min.js"></script>
+<style>
+  :root {
+    --bg: #0e1117; --card: #171c26; --card2: #1d2433;
+    --text: #e6e9f0; --muted: #8a93a6; --accent: #fc5200;
+    --accent2: #4cc2ff; --green: #3ddc84; --yellow: #ffd166; --purple: #b388ff;
+    --border: #262e40;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: -apple-system, "Segoe UI", Roboto, sans-serif;
+         padding: 16px; padding-top: calc(16px + env(safe-area-inset-top)); }
+  .container { max-width: 1200px; margin: 0 auto; }
+  header { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 6px; }
+  h1 { font-size: 1.45rem; flex: 1; min-width: 200px; } h1 .orange { color: var(--accent); }
+  .toolbar { display: flex; gap: 8px; flex-wrap: wrap; }
+  .btn { background: var(--card2); color: var(--text); border: 1px solid var(--border); border-radius: 10px;
+         padding: 8px 14px; font-size: .85rem; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+  .btn:active { transform: scale(.97); }
+  #importMsg { font-size: .8rem; color: var(--muted); width: 100%; }
+  .sub { color: var(--muted); font-size: .85rem; margin-bottom: 20px; }
+  h2 { font-size: 1.1rem; margin: 30px 0 14px; padding-left: 10px; border-left: 4px solid var(--accent); }
+  .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; }
+  .kpi { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; }
+  .kpi .v { font-size: 1.35rem; font-weight: 700; color: var(--accent); }
+  .kpi .v.blue { color: var(--accent2); } .kpi .v.green { color: var(--green); }
+  .kpi .v.yellow { color: var(--yellow); } .kpi .v.purple { color: var(--purple); }
+  .kpi .l { color: var(--muted); font-size: .74rem; margin-top: 3px; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .grid3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 12px; }
+  @media (max-width: 850px) { .grid2 { grid-template-columns: 1fr; } }
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 16px; }
+  .card h3 { font-size: .92rem; margin-bottom: 12px; font-weight: 600; }
+  .card .note { color: var(--muted); font-size: .75rem; margin-top: 10px; line-height: 1.45; }
+  .chart-wrap { position: relative; height: 300px; }
+  .chart-wrap.short { height: 240px; }
+  @media (max-width: 600px) { .chart-wrap { height: 250px; } .chart-wrap.short { height: 210px; } }
+  .record { background: linear-gradient(135deg, var(--card), var(--card2)); border: 1px solid var(--border); border-radius: 12px; padding: 13px 15px; }
+  .record .badge { font-size: 1.25rem; }
+  .record .t { font-weight: 700; margin: 4px 0 2px; font-size: .92rem; }
+  .record .d { color: var(--muted); font-size: .8rem; line-height: 1.5; }
+  .record .big { color: var(--accent); font-weight: 700; font-size: 1.1rem; }
+  .duel { background: linear-gradient(135deg, #1a2030, #232040); border: 1px solid #3a3560; border-radius: 14px; padding: 18px; margin-top: 16px; }
+  .duel h3 { margin-bottom: 12px; font-size: 1rem; }
+  .duel-row { display: flex; gap: 18px; flex-wrap: wrap; align-items: center; }
+  .duel-col { flex: 1; min-width: 180px; }
+  .duel-col .y { color: var(--muted); font-size: .78rem; }
+  .duel-col .p { font-size: 1.45rem; font-weight: 800; }
+  .duel-col .p.new { color: var(--green); }
+  .duel .delta { font-size: 1rem; font-weight: 700; color: var(--green); background: rgba(61,220,132,.12); padding: 8px 14px; border-radius: 10px; }
+  table { width: 100%; border-collapse: collapse; font-size: .82rem; }
+  th { text-align: left; color: var(--muted); font-weight: 600; padding: 6px 7px; border-bottom: 1px solid var(--border); }
+  td { padding: 6px 7px; border-bottom: 1px solid #1f2636; }
+  tr:last-child td { border-bottom: none; }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  .table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .heat-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .heat { display: grid; grid-template-columns: 42px repeat(18, minmax(16px, 1fr)); gap: 3px; font-size: .65rem; min-width: 480px; }
+  .heat .lbl { color: var(--muted); display: flex; align-items: center; }
+  .heat .cell { aspect-ratio: 1; border-radius: 3px; background: #1f2636; }
+  .heat .hlbl { color: var(--muted); text-align: center; }
+  .insights { line-height: 1.6; font-size: .9rem; }
+  .insights li { margin: 8px 0 8px 18px; }
+  .insights b { color: var(--accent); }
+  .insights .good { color: var(--green); font-weight: 600; }
+  .insights .warn { color: var(--yellow); font-weight: 600; }
+  footer { color: var(--muted); font-size: .72rem; text-align: center; margin: 36px 0 10px; }
+  #err { display: none; background: #5c1a1a; color: #ffd7d7; padding: 10px 14px; border-radius: 10px; margin-bottom: 14px; font-size: .85rem; white-space: pre-wrap; }
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <h1>🏃 <span class="orange">Running</span> stats</h1>
+    <div class="toolbar">
+      <label class="btn primary">📥 Importer activities.csv<input type="file" id="fileInput" accept=".csv,text/csv" hidden></label>
+      <button class="btn" id="resetBtn" title="Revenir aux données embarquées">↺ Données du dépôt</button>
+    </div>
+    <div id="importMsg"></div>
+  </header>
+  <div class="sub" id="subtitle">Chargement…</div>
+  <div id="err"></div>
+
+  <div class="kpis" id="kpis"></div>
+
+  <h2>🏆 Records personnels</h2>
+  <div class="grid3" id="records"></div>
+  <div class="duel" id="duel" style="display:none"></div>
+
+  <h2>📈 Volume d'entraînement</h2>
+  <div class="grid2">
+    <div class="card"><h3>Kilométrage mensuel & allure moyenne</h3><div class="chart-wrap"><canvas id="cMonthly"></canvas></div></div>
+    <div class="card"><h3>Kilométrage hebdomadaire vs objectif</h3><div class="chart-wrap"><canvas id="cWeekly"></canvas></div>
+      <div class="note" id="weeklyNote"></div></div>
+    <div class="card"><h3>Kilométrage cumulé par année</h3><div class="chart-wrap"><canvas id="cCum"></canvas></div>
+      <div class="note" id="cumNote"></div></div>
+    <div class="card"><h3>Courbe de forme — fitness / fatigue / fraîcheur</h3><div class="chart-wrap"><canvas id="cForm"></canvas></div>
+      <div class="note">Modèle CTL/ATL sur l'effort relatif de <b>toutes</b> les activités : <span style="color:#4cc2ff">fitness</span> = moyenne exponentielle 42 j, <span style="color:#ff4d6d">fatigue</span> = 7 j, <span style="color:#3ddc84">fraîcheur</span> = fitness − fatigue. Fraîcheur négative = bloc de charge, positive = récupération/affûtage.</div></div>
+  </div>
+
+  <h2>⚡ Allure & cardio</h2>
+  <div class="grid2">
+    <div class="card"><h3>Progression de l'allure (courses ≥ 3 km, moyenne mobile 10 sorties)</h3><div class="chart-wrap"><canvas id="cProg"></canvas></div></div>
+    <div class="card"><h3>Allure vs fréquence cardiaque (taille = distance)</h3><div class="chart-wrap"><canvas id="cPaceHr"></canvas></div></div>
+    <div class="card"><h3>Temps par zone cardiaque (FC max observée : <span id="fcmax"></span> bpm)</h3><div class="chart-wrap short"><canvas id="cZones"></canvas></div>
+      <div class="note">Zones estimées à partir de la FC moyenne de chaque sortie rapportée à la FC max observée en course.</div></div>
+    <div class="card"><h3>FC moyenne mensuelle vs allure — efficacité aérobie</h3><div class="chart-wrap short"><canvas id="cEff"></canvas></div></div>
+  </div>
+
+  <h2>🗓️ Habitudes d'entraînement</h2>
+  <div class="grid2">
+    <div class="card"><h3>Répartition des distances</h3><div class="chart-wrap short"><canvas id="cHist"></canvas></div></div>
+    <div class="card"><h3>Courses par jour de la semaine</h3><div class="chart-wrap short"><canvas id="cDow"></canvas></div></div>
+  </div>
+  <div class="card" style="margin-top:14px"><h3>Heatmap jour × heure de départ</h3><div class="heat-scroll"><div class="heat" id="heat"></div></div></div>
+
+  <h2>🌦️ Conditions & matériel</h2>
+  <div class="grid2">
+    <div class="card"><h3>Température vs allure</h3><div class="chart-wrap short"><canvas id="cTemp"></canvas></div></div>
+    <div class="card"><h3>Kilométrage par paire de chaussures</h3><div class="chart-wrap short"><canvas id="cGear"></canvas></div>
+      <div class="note">« Sans matériel » = sorties sans chaussure assignée sur Strava.</div></div>
+  </div>
+
+  <h2>📅 Bilan par année & autres sports</h2>
+  <div class="grid2">
+    <div class="card"><h3>Comparaison annuelle</h3><div class="table-scroll"><table id="tYear"></table></div>
+      <div class="note">Année en cours : données jusqu'au <span id="lastRun"></span>.</div></div>
+    <div class="card"><h3>Toutes les activités</h3><div class="table-scroll"><table id="tOther"></table></div></div>
+  </div>
+
+  <h2>🔟 Top 10 des sorties les plus longues</h2>
+  <div class="card table-scroll"><table id="tTop"></table></div>
+
+  <h2>🧠 Interprétation & conseils</h2>
+  <div class="card insights" id="insights"></div>
+
+  <footer id="footer"></footer>
+</div>
+
+<script>
+  window.onerror = function (msg, src, line) {
+    var e = document.getElementById('err');
+    e.style.display = 'block';
+    e.textContent += 'Erreur : ' + msg + ' (' + (src || '').split('/').pop() + ':' + line + ')\n';
+  };
+</script>
+<script src="./compute.js"></script>
+<script src="./app.js"></script>
+</body>
+</html>
