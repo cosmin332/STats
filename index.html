@@ -76,6 +76,10 @@
   .shoe { margin-bottom: 12px; }
   .shoe-name { font-size: .84rem; margin-bottom: 5px; }
   .shoe-km { color: var(--muted); font-size: .76rem; float: right; }
+  .ppm-chips { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+  .ppm-chip { background: var(--card2); border: 1px solid var(--border); border-radius: 9px; padding: 7px 11px; font-size: .76rem; }
+  .ppm-chip b { color: var(--accent2); }
+  .ppm-chip .pc { color: var(--muted); }
   .badges { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 10px; }
   .badge-card { display: flex; gap: 10px; align-items: center; background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 10px 13px; }
   .badge-card .bi { font-size: 1.4rem; }
@@ -164,6 +168,19 @@
     <div class="card"><h3>FC moyenne mensuelle vs allure — efficacité aérobie</h3><div class="chart-wrap short"><canvas id="cEff"></canvas></div></div>
     <div class="card"><h3>Cadence (pas/min)</h3><div class="chart-wrap short"><canvas id="cCad"></canvas></div>
       <div class="note" id="cadNote"></div></div>
+  </div>
+
+  <div id="ppmWrap" style="display:none">
+    <h2>👣 Pas par minute — dernières séances</h2>
+    <div class="card"><h3>Cadence minute par minute (données capteur Strava)</h3>
+      <div class="chart-wrap"><canvas id="cPpm"></canvas></div>
+      <div class="ppm-chips" id="ppmChips"></div>
+      <div class="note">Cible usuelle : <b>170–180 pas/min</b>. Une cadence plus haute à allure égale = foulées plus courtes, moins d'impact par appui, moins d'overstriding. Pour progresser : +5 spm à la fois (métronome ou playlist au bon BPM), sur des segments de 1–2 min.</div></div>
+    <div class="grid2" style="margin-top:14px">
+      <div class="card"><h3>Temps passé par plage de cadence (séances ci-dessus)</h3>
+        <div class="chart-wrap short"><canvas id="cPpmHist"></canvas></div></div>
+      <div class="card"><h3>Résumé par séance</h3><div class="table-scroll"><table id="tPpm"></table></div></div>
+    </div>
   </div>
 
   <h2>🗓️ Habitudes d'entraînement</h2>

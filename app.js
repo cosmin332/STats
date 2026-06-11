@@ -415,6 +415,76 @@
     $('insights').innerHTML = '<ul>' + ins.join('') + '</ul>';
   }
 
+  // ---------- Pas par minute (streams API Strava) ----------
+  let ppmCharts = [];
+  function renderStreams(sessions) {
+    ppmCharts.forEach(c => c.destroy());
+    ppmCharts = [];
+    const wrap = $('ppmWrap');
+    if (!sessions || !sessions.length) { wrap.style.display = 'none'; return; }
+    wrap.style.display = '';
+
+    const fmtD = d => d ? d.slice(8, 10) + '/' + d.slice(5, 7) : '?';
+    const cols = [C.orange, C.blue, C.green, C.purple, C.yellow, C.red];
+    ppmCharts.push(new Chart($('cPpm'), { type: 'line', data: {
+      datasets: sessions.map((s, i) => ({
+        label: `${fmtD(s.date)} · ${s.km} km`,
+        data: s.t.map((t, j) => ({ x: t, y: s.c[j] })),
+        borderColor: i === 0 ? C.orange : cols[i % cols.length] + '88',
+        borderWidth: i === 0 ? 2.5 : 1.3, pointRadius: 0, tension: .3,
+      })).concat([{
+        label: 'cible 170', data: [{ x: 0, y: 170 }, { x: Math.max(...sessions.map(s => s.t[s.t.length - 1])), y: 170 }],
+        borderColor: C.green + '99', borderDash: [5, 5], borderWidth: 1, pointRadius: 0,
+      }]) },
+      options: { maintainAspectRatio: false, scales: {
+        x: { type: 'linear', title: { display: true, text: 'minutes' } },
+        y: { title: { display: true, text: 'pas/min' }, suggestedMin: 140, suggestedMax: 190 }
+      }, plugins: { legend: { display: true, labels: { boxWidth: 14 } },
+        tooltip: { callbacks: { label: ctx => `${ctx.dataset.label} : ${ctx.parsed.y} spm à ${Math.round(ctx.parsed.x)} min` } } } }
+    }));
+
+    $('ppmChips').innerHTML = sessions.map(s =>
+      `<div class="ppm-chip">${fmtD(s.date)} · ${s.km} km — <b>${s.avg} spm</b> <span class="pc">· ${s.pct170} % ≥ 170</span></div>`).join('');
+
+    // Histogramme du temps par plage (les points condensés ont un poids ~égal par séance)
+    const bins = ['<160', '160-165', '165-170', '170-175', '175-180', '180+'];
+    const counts = bins.map(() => 0);
+    let total = 0;
+    for (const s of sessions) for (const v of s.c) {
+      const i = v < 160 ? 0 : v < 165 ? 1 : v < 170 ? 2 : v < 175 ? 3 : v < 180 ? 4 : 5;
+      counts[i]++; total++;
+    }
+    ppmCharts.push(new Chart($('cPpmHist'), { type: 'bar', data: { labels: bins,
+      datasets: [{ data: counts.map(c => Math.round(100 * c / total)),
+        backgroundColor: ['#ff4d6d', '#ffd166', '#ffd166', '#3ddc84', '#3ddc84', '#4cc2ff'].map(c => c + 'cc'), borderRadius: 6 }] },
+      options: { maintainAspectRatio: false, plugins: { legend: { display: false },
+        tooltip: { callbacks: { label: ctx => ctx.parsed.y + ' % du temps' } } },
+        scales: { y: { title: { display: true, text: '% du temps' } } } }
+    }));
+
+    $('tPpm').innerHTML =
+      '<tr><th>Date</th><th>Sortie</th><th class="num">km</th><th class="num">Cadence moy</th><th class="num">% ≥ 170</th></tr>' +
+      sessions.map(s => `<tr><td>${fmtD(s.date)}</td><td>${s.name}</td><td class="num">${s.km}</td>
+        <td class="num"><b style="color:${s.avg >= 170 ? '#3ddc84' : s.avg >= 165 ? '#ffd166' : '#ff4d6d'}">${s.avg}</b></td>
+        <td class="num">${s.pct170} %</td></tr>`).join('');
+  }
+
+  // Données de démonstration (ouvrir la page avec #demo-streams)
+  function demoStreams() {
+    const mkS = (date, km, base, drift, min) => {
+      const t = [], c = [];
+      for (let m = 0; m <= min; m += 0.5) {
+        t.push(m);
+        c.push(Math.round(base + drift * (m / min) + 4 * Math.sin(m / 2) + (Math.random() - .5) * 4));
+      }
+      const avg = Math.round(c.reduce((a, b) => a + b, 0) / c.length);
+      return { id: date, name: 'Course démo', date, km, t, c, avg,
+        pct170: Math.round(100 * c.filter(v => v >= 170).length / c.length) };
+    };
+    return [mkS('2026-06-09', 7.3, 168, 4, 48), mkS('2026-06-02', 5.1, 165, -3, 32),
+            mkS('2026-05-31', 20.0, 163, -6, 122), mkS('2026-05-26', 6.2, 166, 2, 40)];
+  }
+
   // ---------- Boutons & état Strava ----------
   function updateButtons() {
     const btn = $('stravaBtn');
@@ -426,6 +496,8 @@
     try {
       const { acts, gear } = await Strava.sync(msg);
       render(computeFromStrava(acts, gear), 'Strava du ' + Strava.cachedDate());
+      try { renderStreams(await Strava.syncStreams(acts, 6, msg)); }
+      catch (e) { console.warn('streams cadence :', e); }
       msg(`✅ ${acts.length} activités synchronisées depuis Strava`);
     } catch (e) {
       msg('❌ ' + e.message);
@@ -490,8 +562,10 @@
     } catch (e) { msg('❌ ' + e.message); }
     if (Strava.isConnected() && Strava.hasCache()) {
       render(computeFromStrava(Strava.cached(), Strava.cachedGear()), 'Strava du ' + Strava.cachedDate());
+      renderStreams(Strava.cachedStreams());
       return;
     }
+    if (location.hash === '#demo-streams') renderStreams(demoStreams());
     const saved = localStorage.getItem(LS_CSV);
     if (saved) {
       try { render(computeData(saved), 'importées le ' + (localStorage.getItem(LS_CSV + '_date') || '?')); return; }

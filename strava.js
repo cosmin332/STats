@@ -4,7 +4,7 @@
   'use strict';
 
   const LS = { tok: 'strava_tokens', acts: 'strava_acts', actsDate: 'strava_acts_date',
-    cfg: 'strava_cfg', gear: 'strava_gear' };
+    cfg: 'strava_cfg', gear: 'strava_gear', streams: 'strava_streams' };
   const API = 'https://www.strava.com/api/v3';
 
   const get = (k, fb) => { try { return JSON.parse(localStorage.getItem(k)) ?? fb; } catch (e) { return fb; } };
@@ -75,7 +75,61 @@
     return cached;
   }
 
+  // Condense un stream (1 pt/s) en ~200 points : moyenne par paquet, cadence en pas/min (×2)
+  function condense(time, cad, buckets) {
+    const size = Math.max(1, Math.ceil(time.length / (buckets || 200)));
+    const out = { t: [], c: [] };
+    for (let i = 0; i < time.length; i += size) {
+      let ts = 0, n = 0; const cs = [];
+      for (let j = i; j < Math.min(i + size, time.length); j++) {
+        ts += time[j]; n++;
+        if (cad[j] > 0) cs.push(cad[j]); // 0 = pause/marche sans signal
+      }
+      if (cs.length) {
+        out.t.push(Math.round(ts / n / 60 * 100) / 100);
+        out.c.push(Math.round(2 * cs.reduce((a, b) => a + b, 0) / cs.length));
+      }
+    }
+    return out;
+  }
+
+  const isRunType = a => ['Run', 'TrailRun', 'VirtualRun'].includes(a.sport_type || a.type);
+
+  // Récupère les streams de cadence des `n` dernières courses (avec cache par activité)
+  async function syncStreams(acts, n, status) {
+    status = status || (() => {});
+    const tok = await ensureToken();
+    if (!tok) throw new Error('Non connecté à Strava.');
+    const runs = acts.filter(isRunType)
+      .sort((a, b) => (b.start_date_local || '').localeCompare(a.start_date_local || ''))
+      .slice(0, n || 6);
+    const cached = get(LS.streams, {});
+    const fresh = {};
+    for (const a of runs) {
+      if (cached[a.id]) { fresh[a.id] = cached[a.id]; continue; }
+      status(`Cadence… ${a.name}`);
+      try {
+        const s = await api(`/activities/${a.id}/streams?keys=time,cadence&key_by_type=true`, tok);
+        if (!s.cadence || !s.time || !s.cadence.data.some(v => v > 0)) continue;
+        const cd = condense(s.time.data, s.cadence.data);
+        if (cd.c.length < 5) continue;
+        const total = cd.c.length;
+        fresh[a.id] = {
+          id: a.id, name: a.name, date: (a.start_date_local || '').slice(0, 10),
+          km: Math.round((a.distance || 0) / 10) / 100,
+          t: cd.t, c: cd.c,
+          avg: Math.round(cd.c.reduce((x, y) => x + y, 0) / total),
+          pct170: Math.round(100 * cd.c.filter(v => v >= 170).length / total),
+        };
+      } catch (e) { /* stream indisponible : on passe */ }
+    }
+    localStorage.setItem(LS.streams, JSON.stringify(fresh));
+    return Object.values(fresh).sort((a, b) => b.date.localeCompare(a.date));
+  }
+
   window.Strava = {
+    syncStreams,
+    cachedStreams: () => Object.values(get(LS.streams, {})).sort((a, b) => b.date.localeCompare(a.date)),
     config: cfg,
     saveConfig: o => localStorage.setItem(LS.cfg, JSON.stringify(o)),
     isConfigured: () => !!(cfg().client_id && cfg().client_secret),
@@ -120,7 +174,7 @@
     },
 
     disconnect() {
-      [LS.tok, LS.acts, LS.actsDate].forEach(k => localStorage.removeItem(k));
+      [LS.tok, LS.acts, LS.actsDate, LS.streams].forEach(k => localStorage.removeItem(k));
     },
   };
 })();
