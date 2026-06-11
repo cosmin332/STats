@@ -3,6 +3,8 @@
 (function () {
   'use strict';
 
+  const APP_VERSION = '5'; // affichée en pied de page — incrémenter à chaque déploiement
+
   const C = { orange: '#fc5200', blue: '#4cc2ff', green: '#3ddc84', yellow: '#ffd166',
     purple: '#b388ff', red: '#ff4d6d', muted: '#8a93a6', grid: '#262e40' };
   Chart.defaults.color = C.muted;
@@ -33,7 +35,7 @@
     $('subtitle').textContent = `${D.profile.name} · ${D.profile.city} · ${g.first_run.split('-')[0]} → ${g.last_run} · données ${source}, analysées le ${D.generated}`;
     $('lastRun').textContent = g.last_run;
     $('fcmax').textContent = D.fc_max ? Math.round(D.fc_max) : '—';
-    $('footer').textContent = `${D.runs.length} courses à pied · ${g.total_km} km — données Strava.`;
+    $('footer').textContent = `${D.runs.length} courses à pied · ${g.total_km} km — données Strava · app v${APP_VERSION}`;
 
     // ---- KPIs ----
     const kpis = [

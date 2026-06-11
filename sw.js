@@ -2,7 +2,7 @@
    - navigations (index.html) : réseau d'abord → on voit toujours la dernière version en ligne,
      cache en secours hors-ligne ;
    - autres fichiers : stale-while-revalidate (rapide, mis à jour en arrière-plan). */
-const CACHE = 'running-stats-v4';
+const CACHE = 'running-stats-v5';
 const ASSETS = [
   './',
   './index.html',
@@ -25,11 +25,15 @@ self.addEventListener('install', e => {
 });
 
 self.addEventListener('activate', e => {
-  e.waitUntil(
-    caches.keys()
-      .then(keys => Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k))))
-      .then(() => self.clients.claim())
-  );
+  e.waitUntil((async () => {
+    // Purge TOUS les anciens caches puis recharge les onglets ouverts :
+    // garantit que les appareils coincés sur une vieille version récupèrent la nouvelle.
+    const keys = await caches.keys();
+    await Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k)));
+    await self.clients.claim();
+    const wins = await self.clients.matchAll({ type: 'window' });
+    await Promise.all(wins.map(c => c.navigate(c.url).catch(() => {})));
+  })());
 });
 
 self.addEventListener('fetch', e => {
