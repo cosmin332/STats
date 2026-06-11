@@ -579,6 +579,13 @@
 
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('./sw.js').catch(e => console.warn('SW non enregistré :', e));
+    // Quand un nouveau service worker prend la main, on recharge une fois pour servir la nouvelle version
+    let reloaded = false;
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (reloaded) return;
+      reloaded = true;
+      location.reload();
+    });
   }
 
   load();

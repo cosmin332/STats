@@ -1,6 +1,8 @@
-/* Service worker : précache le shell de l'app, stratégie stale-while-revalidate
-   pour que les mises à jour du dépôt (dont activities.csv) arrivent au rechargement suivant. */
-const CACHE = 'running-stats-v3';
+/* Service worker :
+   - navigations (index.html) : réseau d'abord → on voit toujours la dernière version en ligne,
+     cache en secours hors-ligne ;
+   - autres fichiers : stale-while-revalidate (rapide, mis à jour en arrière-plan). */
+const CACHE = 'running-stats-v4';
 const ASSETS = [
   './',
   './index.html',
@@ -32,6 +34,21 @@ self.addEventListener('activate', e => {
 
 self.addEventListener('fetch', e => {
   if (e.request.method !== 'GET' || new URL(e.request.url).origin !== location.origin) return;
+
+  // Pages (navigation) : réseau d'abord, cache si hors-ligne
+  if (e.request.mode === 'navigate') {
+    e.respondWith(
+      fetch(e.request)
+        .then(resp => {
+          if (resp.ok) caches.open(CACHE).then(c => c.put('./index.html', resp.clone()));
+          return resp.clone();
+        })
+        .catch(() => caches.match('./index.html'))
+    );
+    return;
+  }
+
+  // Ressources : cache d'abord, mise à jour en arrière-plan
   e.respondWith(
     caches.open(CACHE).then(cache =>
       cache.match(e.request, { ignoreSearch: true }).then(cached => {
