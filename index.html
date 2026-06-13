@@ -165,6 +165,14 @@
   .insight-card { background: linear-gradient(160deg, var(--glass2), var(--glass)); border: 1px solid var(--border);
                   border-radius: 14px; padding: 13px 15px; font-size: .87rem; line-height: 1.55; margin-bottom: 10px;
                   backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
+  .verdict-line { margin-top: 12px; padding: 9px 12px; border-left: 3px solid var(--muted);
+                  background: rgba(255,255,255,.03); border-radius: 0 10px 10px 0;
+                  font-size: .8rem; line-height: 1.5; }
+  .verdict-line b { font-weight: 700; white-space: nowrap; }
+  .overall { display: flex; align-items: center; gap: 18px; }
+  .ov-score { font-size: 2.3rem; font-weight: 800; line-height: 1; }
+  .ov-label { font-weight: 700; font-size: 1.02rem; }
+  .ov-chips { color: var(--muted); font-size: .82rem; margin-top: 4px; }
   .insight-card b { color: var(--cyan); }
   .insight-card .good { color: var(--neon); font-weight: 600; }
   .insight-card .warn { color: var(--amber); font-weight: 600; }
@@ -202,6 +210,7 @@
 
   <!-- ================= 🎛️ COCKPIT ================= -->
   <div class="tab active" id="tab-cockpit">
+    <div class="card" id="overallMini" style="display:none;margin-bottom:14px"></div>
     <div class="kpis" id="kpis"></div>
 
     <h2>⚡ Objectif adaptatif de la semaine</h2>
@@ -335,6 +344,8 @@
 
   <!-- ================= 🧠 LAB ================= -->
   <div class="tab" id="tab-lab">
+    <h2>📊 Score de forme global</h2>
+    <div class="card" id="overallBox" style="display:none"></div>
     <h2>🧠 Le feed d'insights</h2>
     <div id="insights"></div>
     <div class="card" style="margin-top:18px"><h3>Comment c'est calculé</h3>
@@ -379,6 +390,7 @@
 </script>
 <script src="./config.js"></script>
 <script src="./compute.js"></script>
+<script src="./verdicts.js"></script>
 <script src="./strava.js"></script>
 <script src="./app.js"></script>
 </body>

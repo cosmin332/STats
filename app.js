@@ -3,7 +3,7 @@
 (function () {
   'use strict';
 
-  const APP_VERSION = '10'; // affichée en pied de page — incrémenter à chaque déploiement
+  const APP_VERSION = '11'; // affichée en pied de page — incrémenter à chaque déploiement
 
   // Palette cyberpunk : cyan = primaire, magenta = tendances/records, néon = succès
   const C = { orange: '#22d3ee', blue: '#ff2d95', green: '#54f283', yellow: '#ffd166',
@@ -444,6 +444,37 @@
     $('insights').innerHTML = ins.map(x => `<div class="insight-card">${x.replace(/^<li>/, '').replace(/<\/li>$/, '')}</div>`).join('');
 
     renderExtras(D, acwrPts);
+    applyVerdicts(D);
+  }
+
+  // ---------- Verdicts par graphique + score global ----------
+  function applyVerdicts(D) {
+    document.querySelectorAll('.verdict-line').forEach(e => e.remove());
+    const V = window.computeVerdicts ? computeVerdicts(D) : {};
+    for (const [id, vd] of Object.entries(V)) {
+      if (id[0] === '_') continue;
+      const el = $(id);
+      const card = el && el.closest('.card');
+      if (!card) continue;
+      const line = document.createElement('div');
+      line.className = 'verdict-line';
+      line.style.borderLeftColor = vd.color;
+      line.innerHTML = `<b style="color:${vd.color}">${vd.icon} ${vd.label}</b> — ${vd.text}`;
+      const note = card.querySelector('.note');
+      if (note) card.insertBefore(line, note); else card.appendChild(line);
+    }
+    renderOverall(V._overall);
+  }
+
+  function renderOverall(o) {
+    const boxes = [$('overallMini'), $('overallBox')];
+    if (!o) { boxes.forEach(b => b && (b.style.display = 'none')); return; }
+    const html = `<div class="overall">
+      <div class="ov-score" style="color:${o.color};text-shadow:0 0 18px ${o.color}66">${o.score}<span style="font-size:1rem;color:var(--muted);text-shadow:none">/100</span></div>
+      <div><div class="ov-label" style="color:${o.color}">${o.icon} ${o.label}</div>
+      <div class="ov-chips">⭐ ${o.cnt[4]} · 🟢 ${o.cnt[3]} · 🟡 ${o.cnt[2]} · 🟠 ${o.cnt[1]} · 🔴 ${o.cnt[0]}</div></div></div>`;
+    boxes.forEach(b => { if (b) { b.style.display = ''; b.innerHTML = html + (b.id === 'overallBox'
+      ? '<div class="note">Score = moyenne des notes de tous les graphiques évaluables, sur 100. Il évolue à chaque synchronisation. Le détail graphe par graphe est sous chaque visualisation des onglets.</div>' : ''); } });
   }
 
   // ---------- Extras : jauge objectif, dernière sortie, caps, matrice, jauge ACWR ----------
