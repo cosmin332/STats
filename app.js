@@ -3,7 +3,7 @@
 (function () {
   'use strict';
 
-  const APP_VERSION = '11'; // affichée en pied de page — incrémenter à chaque déploiement
+  const APP_VERSION = '12'; // affichée en pied de page — incrémenter à chaque déploiement
 
   // Palette cyberpunk : cyan = primaire, magenta = tendances/records, néon = succès
   const C = { orange: '#22d3ee', blue: '#ff2d95', green: '#54f283', yellow: '#ffd166',
@@ -777,6 +777,7 @@
     const c = Strava.config();
     $('cfgId').value = c.client_id;
     $('cfgSecret').value = c.client_secret;
+    if ($('cbDomain')) $('cbDomain').textContent = Strava.callbackDomain();
     $('cfgDlg').showModal();
   });
   $('cfgSave').addEventListener('click', ev => {

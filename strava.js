@@ -148,9 +148,18 @@
         + '&response_type=code&approval_prompt=auto&scope=activity:read_all';
     },
 
+    callbackDomain: () => location.hostname,
+    redirectUri: () => location.origin + location.pathname,
+
     // À appeler au chargement : true si on revient de l'autorisation Strava
     async handleRedirect() {
       const u = new URL(location.href);
+      const err = u.searchParams.get('error');
+      if (err) {
+        ['error', 'state'].forEach(k => u.searchParams.delete(k));
+        history.replaceState(null, '', u.pathname + (u.searchParams.toString() ? '?' + u.searchParams : ''));
+        throw new Error('Strava a refusé l\'autorisation : ' + err + '. Vérifie le « Authorization Callback Domain » de ton app Strava (doit être ' + location.hostname + ').');
+      }
       const code = u.searchParams.get('code');
       if (!code) return false;
       const c = cfg();

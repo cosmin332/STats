@@ -366,9 +366,12 @@
 
 <dialog id="cfgDlg">
   <h3>⚙️ Application API Strava</h3>
-  <p>Crée ton application sur <b>strava.com/settings/api</b> (« Authorization Callback Domain » = le domaine de cette page,
-     par ex. <b>cosmin332.github.io</b>), puis recopie les identifiants. Stockés sur cet appareil
-     (ou dans <b>config.js</b> du dépôt pour tous les appareils).</p>
+  <p>Crée ton application sur <b>strava.com/settings/api</b>, puis recopie les identifiants ci-dessous.
+     Stockés sur cet appareil (ou dans <b>config.js</b> du dépôt pour tous les appareils).</p>
+  <p style="background:rgba(34,211,238,.08);border:1px solid rgba(34,211,238,.3);border-radius:9px;padding:9px 11px">
+     ⚠️ Dans Strava, le champ <b>« Authorization Callback Domain »</b> doit être <u>exactement</u> :
+     <b id="cbDomain" style="color:var(--cyan)">…</b><br>
+     <span style="font-size:.72rem">(sans https://, sans / ni chemin, sans www). C'est la cause n°1 de l'erreur « The object cannot be found here ».)</span></p>
   <form method="dialog">
     <label for="cfgId">Client ID</label>
     <input id="cfgId" inputmode="numeric" autocomplete="off" placeholder="12345">
