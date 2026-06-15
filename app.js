@@ -3,7 +3,7 @@
 (function () {
   'use strict';
 
-  const APP_VERSION = '14'; // affichée en pied de page — incrémenter à chaque déploiement
+  const APP_VERSION = '15'; // affichée en pied de page — incrémenter à chaque déploiement
 
   // Palette cyberpunk : cyan = primaire, magenta = tendances/records, néon = succès
   const C = { orange: '#22d3ee', blue: '#ff2d95', green: '#54f283', yellow: '#ffd166',
@@ -22,6 +22,7 @@
   const msg = t => { $('importMsg').textContent = t; };
 
   let charts = [];
+  let lastD = null; // dernier objet de données rendu (pour rafraîchir les verdicts en direct)
   function mk(id, cfg) { charts.push(new Chart($(id), cfg)); }
   function showCard(id, show) {
     const card = $(id).closest('.card');
@@ -33,6 +34,8 @@
     charts = [];
     const g = D.global;
     D.health = healthComputed(); // 3ᵉ source Apple Santé (null si non importée)
+    D.shield = shieldInfo();     // renforcement de la semaine — compte dans le score global
+    lastD = D;
 
     $('subtitle').textContent = `${D.profile.name} · ${D.profile.city} · ${g.first_run.split('-')[0]} → ${g.last_run} · données ${source}, analysées le ${D.generated}`;
     $('lastRun').textContent = g.last_run;
@@ -791,25 +794,22 @@
     if (hi.length) $('insights').insertAdjacentHTML('beforeend', hi.map(x => `<div class="insight-card">${x}</div>`).join(''));
   }
 
-  // ---------- Bouclier anti-blessure (checklist hebdo, localStorage) ----------
+  // ---------- Programme de renforcement (4 séances/sem, checklist hebdo, localStorage) ----------
+  // Reflète le programme réel suivi après la muscu — compté dans le score de forme global.
   const CHECKLIST = [
-    ['🦵', 'Mollets excentriques', '3×15 par jambe, sur une marche'],
-    ['🧱', 'Gainage / core', '2 séries de planches + latérales'],
-    ['🦶', 'Squats unijambistes', '3×8 par jambe, contrôle du genou'],
-    ['🧘', 'Mobilité hanches/chevilles', '10 min'],
-    ['🐢', 'Une vraie sortie facile', 'FC < 70 % FCmax, conversation possible'],
-    ['📏', 'Sortie longue progressive', 'la plus longue de la semaine en aisance'],
+    ['🧱', 'Lundi — Gainage / core', 'Planche · planche latérale · mountain climbers · relevés de jambes · hollow hold · superman'],
+    ['🧘', 'Mercredi — Mobilité', 'Cercles de hanches · world\'s greatest stretch · mobilité cheville · psoas · deep squat hold · leg swings'],
+    ['🦵', 'Jeudi — Force jambes', 'Mollets · fentes marchées · pont fessier (2 variantes) · step-up · wall sit'],
+    ['🤸', 'Samedi — Équilibre & stabilité', 'Équilibre 1 jambe · single-leg deadlift · clamshell · dead bug · planche dynamique · russian twist'],
   ];
   const mondayKey = () => {
     const d = new Date(); d.setDate(d.getDate() - (d.getDay() + 6) % 7);
     return 'shield_' + d.toISOString().slice(0, 10);
   };
   function shieldState() { try { return JSON.parse(localStorage.getItem(mondayKey())) || {}; } catch (e) { return {}; } }
-  function shieldScore() {
-    const st = shieldState();
-    const n = CHECKLIST.filter((_, i) => st[i]).length;
-    return Math.round(100 * n / CHECKLIST.length);
-  }
+  function shieldDone() { const st = shieldState(); return CHECKLIST.filter((_, i) => st[i]).length; }
+  function shieldScore() { return Math.round(100 * shieldDone() / CHECKLIST.length); }
+  function shieldInfo() { return { done: shieldDone(), total: CHECKLIST.length, score: shieldScore() }; }
   function renderChecklist() {
     const st = shieldState();
     $('checklist').innerHTML = CHECKLIST.map(([icon, t, s], i) => `
@@ -818,7 +818,7 @@
         <div>${icon} <span class="ct">${t}</span><div class="cs">${s}</div></div>
       </div>`).join('');
     const score = shieldScore();
-    $('shieldScore').textContent = score + ' %';
+    $('shieldScore').textContent = shieldDone() + '/' + CHECKLIST.length;
     $('shieldScore').style.color = score >= 80 ? 'var(--neon)' : score >= 50 ? 'var(--amber)' : 'var(--red)';
     $('shieldBar').style.width = score + '%';
     $('shieldBar').style.background = score >= 80 ? 'linear-gradient(90deg,#54f283,#a7f3d0)' : score >= 50 ? 'linear-gradient(90deg,#ffd166,#fde68a)' : 'linear-gradient(90deg,#ff4d6d,#ff8fa3)';
@@ -830,6 +830,8 @@
     st[item.dataset.i] = !st[item.dataset.i];
     localStorage.setItem(mondayKey(), JSON.stringify(st));
     renderChecklist();
+    // Met à jour le score de forme global en direct (le renforcement y compte)
+    if (lastD) { lastD.shield = shieldInfo(); applyVerdicts(lastD); }
   });
 
   // ---------- Onglets ----------

@@ -261,6 +261,17 @@
         (s.cadence.mean >= 170 ? 'Foulée efficace.' : 'Vise +5 spm par paliers (métronome).'));
     })();
 
+    // ---- Renforcement (4 séances/sem) — programme réel suivi après la muscu ----
+    (function () {
+      const sh = D.shield;
+      if (!sh || !sh.total) return;
+      out.checklist = v(up(sh.score, [25, 50, 75, 100]), `<b>${sh.done}/${sh.total}</b> séances de renforcement validées cette semaine (${sh.score} %). ` +
+        (sh.score >= 75 ? 'Excellent travail invisible — c\'est ce qui protège tendons et genoux pendant les montées de charge.'
+          : sh.score >= 50 ? 'Bon rythme, vise les 4 séances pour le plein effet.'
+            : sh.score > 0 ? 'Peu de renforcement cette semaine — c\'est ton bouclier anti-blessure n°1.'
+              : 'Aucune séance validée — pense à cocher tes routines au fil de la semaine.'));
+    })();
+
     // ---- Score global ----
     const rated = Object.values(out).filter(x => x.lvl >= 0);
     if (rated.length) {
