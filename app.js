@@ -3,7 +3,7 @@
 (function () {
   'use strict';
 
-  const APP_VERSION = '13'; // affichée en pied de page — incrémenter à chaque déploiement
+  const APP_VERSION = '14'; // affichée en pied de page — incrémenter à chaque déploiement
 
   // Palette cyberpunk : cyan = primaire, magenta = tendances/records, néon = succès
   const C = { orange: '#22d3ee', blue: '#ff2d95', green: '#54f283', yellow: '#ffd166',
@@ -613,21 +613,6 @@
   const HC = { vo2: C.orange, rhr: C.red, hrv: C.purple, gct: C.orange, vosc: C.blue,
     stride: C.green, power: C.yellow };
 
-  // Petite ligne temporelle générique
-  function healthLine(id, series, color, fmt, unit, yOpts) {
-    if (!series || !series.length) { showCard(id, false); return; }
-    showCard(id, true);
-    mk(id, { type: 'line', data: { datasets: [{
-        data: series.map(p => ({ x: p.x, y: p.y })), borderColor: color, backgroundColor: color + '1f',
-        pointRadius: series.length > 40 ? 0 : 2.5, borderWidth: 2.5, tension: .3, fill: true }] },
-      options: { maintainAspectRatio: false, scales: {
-        x: { type: 'time', time: { unit: 'month' }, ticks: { maxTicksLimit: 8 } },
-        y: Object.assign({ ticks: fmt ? { callback: fmt } : {} }, yOpts || {}) },
-        plugins: { legend: { display: false }, tooltip: { callbacks: {
-          label: ctx => (fmt ? fmt(ctx.parsed.y) : ctx.parsed.y) + (unit ? ' ' + unit : '') } } } }
-    });
-  }
-
   // Texte de tendance coloré selon « amélioration »
   function trendNote(s, unit, extra) {
     if (!s) return '';
@@ -637,27 +622,64 @@
     return `Actuel <b style="color:${col}">${s.latest}${unit}</b> · moy. ${s.mean}${unit} · ${arrow} ${sign}${s.delta}${unit} sur la période (${s.n} mesures).${extra ? ' ' + extra : ''}`;
   }
 
+  const vo2lvl = s => !s ? '' : s.latest >= 55 ? 'excellent (niveau compétiteur)' : s.latest >= 50 ? 'très bon' : s.latest >= 45 ? 'bon (au-dessus de la moyenne)' : s.latest >= 40 ? 'correct' : 'à développer';
+
+  // Corrélation de Pearson entre une série Santé {x,y} et une série {date->valeur}, sur dates communes
+  function corrWith(serie, byDate) {
+    const a = [], b = [];
+    for (const p of serie) { const v = byDate.get(p.x); if (v !== undefined) { a.push(p.y); b.push(v); } }
+    if (a.length < 5) return null;
+    const ma = a.reduce((s, x) => s + x, 0) / a.length, mb = b.reduce((s, x) => s + x, 0) / b.length;
+    let n = 0, da = 0, db = 0;
+    for (let i = 0; i < a.length; i++) { n += (a[i] - ma) * (b[i] - mb); da += (a[i] - ma) ** 2; db += (b[i] - mb) ** 2; }
+    return da && db ? n / Math.sqrt(da * db) : null;
+  }
+
+  // Tuile de stat « signature » (valeur + tendance fléchée)
+  function hstat(label, sum, unit, fmt) {
+    if (!sum) return '';
+    const arrow = sum.delta === 0 ? '→' : sum.delta > 0 ? '↑' : '↓';
+    const col = sum.improving ? C.green : (sum.delta === 0 ? C.muted : C.yellow);
+    const val = fmt ? fmt(sum.latest) : sum.latest;
+    return `<div class="hstat"><div class="hv" style="color:${col}">${val}<span style="font-size:.7rem;color:var(--muted)"> ${unit}</span></div>
+      <div class="hl">${label}</div>
+      <div class="ht" style="color:${col}">${arrow} ${sum.delta > 0 ? '+' : ''}${sum.delta}${unit} · moy ${sum.mean}</div></div>`;
+  }
+
   function renderHealth(D) {
     const H = D.health;
     const sections = ['healthCockpit', 'healthMoteur', 'healthMeca', 'healthCharge'];
     if (!H || !H.has) { sections.forEach(id => $(id) && ($(id).style.display = 'none')); return; }
     sections.forEach(id => $(id) && ($(id).style.display = ''));
 
-    // ---- 🩺 Moteur : VO₂max / FC repos / VFC ----
-    healthLine('cVo2', H.vo2, HC.vo2, null, 'ml/kg/min');
-    healthLine('cRhr', H.rhr, HC.rhr, null, 'bpm');
-    healthLine('cHrv', H.hrv, HC.hrv, null, 'ms');
-    const vo2lvl = s => !s ? '' : s.latest >= 55 ? 'excellent (niveau compétiteur)' : s.latest >= 50 ? 'très bon' : s.latest >= 45 ? 'bon (au-dessus de la moyenne)' : s.latest >= 40 ? 'correct' : 'à développer';
-    $('vo2Note').innerHTML = H.sum.vo2 ? trendNote(H.sum.vo2, '', `Repère : ${vo2lvl(H.sum.vo2)}.`) : '';
-    $('rhrNote').innerHTML = H.sum.rhr ? trendNote(H.sum.rhr, ' bpm', 'Une FC de repos qui baisse = cœur qui s\'économise, signe d\'une meilleure forme aérobie.') : '';
-    $('hrvNote').innerHTML = H.sum.hrv ? trendNote(H.sum.hrv, ' ms', 'VFC haute = bonne récupération du système nerveux. Les chutes brutales annoncent fatigue ou maladie.') : '';
+    // ═══ 🩺 MOTEUR : VO₂max mesuré × charge de fond (CTL) — l'entraînement se traduit-il en gains ? ═══
+    if (H.vo2.length) {
+      showCard('cVo2', true);
+      const ctlByDate = new Map(D.fitness.map(p => [p.date, p.ctl]));
+      const ctl = D.fitness.map(p => ({ x: p.date, y: p.ctl }));
+      mk('cVo2', { data: { datasets: [
+          { type: 'line', label: 'VO₂max (ml/kg/min)', data: H.vo2.map(p => ({ x: p.x, y: p.y })), borderColor: HC.vo2, backgroundColor: HC.vo2 + '1f', pointRadius: 3, borderWidth: 2.5, tension: .3, fill: true, yAxisID: 'y' },
+          { type: 'line', label: 'Forme / CTL (charge 42 j)', data: ctl, borderColor: C.blue, pointRadius: 0, borderWidth: 2, tension: .3, yAxisID: 'y2' }
+        ] },
+        options: { maintainAspectRatio: false, scales: {
+          x: { type: 'time', time: { unit: 'month' }, ticks: { maxTicksLimit: 8 } },
+          y: { title: { display: true, text: 'VO₂max' } },
+          y2: { position: 'right', grid: { drawOnChartArea: false }, title: { display: true, text: 'CTL' } } },
+          plugins: { legend: { display: true } } }
+      });
+      const corr = corrWith(H.vo2, ctlByDate);
+      let link = '';
+      if (corr !== null) link = corr > 0.4 ? ` <span style="color:${C.neon}">Lié à ta charge de fond (corr ${corr.toFixed(2)}) : ton entraînement se transforme bien en VO₂max mesurée.</span>`
+        : corr < -0.3 ? ` <span style="color:${C.amber}">VO₂max et charge évoluent en sens inverse (corr ${corr.toFixed(2)}) — fatigue accumulée qui masque les gains ?</span>`
+          : ` Peu corrélé à la charge récente (corr ${corr.toFixed(2)}) : les gains de VO₂max viennent surtout de l'intensité (VMA), pas du seul volume.`;
+      $('vo2Note').innerHTML = (H.sum.vo2 ? trendNote(H.sum.vo2, '', `Repère : ${vo2lvl(H.sum.vo2)}.`) : '') + link;
+    } else showCard('cVo2', false);
 
-    // ---- 🦿 Mécanique : biomécanique réelle ----
-    const hasBio = H.gct.length || H.vosc.length || H.stride.length || H.power.length;
+    // ═══ 🦿 MÉCANIQUE : stress biomécanique (GCT × oscillation) + bandeau signature de foulée ═══
+    const hasBio = H.gct.length || H.vosc.length || H.stride.length || H.power.length || H.cadence.length;
     $('bsiCard').style.display = hasBio ? 'none' : '';
-    $('healthMeca').style.display = (hasBio || H.cadence.length) ? '' : 'none';
+    $('healthMeca').style.display = hasBio ? '' : 'none';
 
-    // Bio1 : GCT (ms) + oscillation verticale (cm)
     if (H.gct.length || H.vosc.length) {
       showCard('cBio1', true);
       mk('cBio1', { data: { datasets: [
@@ -670,51 +692,22 @@
           y2: { position: 'right', grid: { drawOnChartArea: false }, title: { display: true, text: 'cm' } } },
           plugins: { legend: { display: true } } }
       });
+      const gctTxt = H.sum.gct ? `Contact sol ${H.sum.gct.latest} ms (${H.sum.gct.latest < 250 ? 'élite' : H.sum.gct.latest < 300 ? 'efficace' : 'à raccourcir'})` : '';
+      const voTxt = H.sum.vosc ? `oscillation ${H.sum.vosc.latest} cm (${H.sum.vosc.latest < 8 ? 'très économique' : H.sum.vosc.latest < 10 ? 'bon' : 'rebond un peu haut'})` : '';
+      $('bio1Note').innerHTML = [gctTxt, voTxt].filter(Boolean).join(' · ') + '. Moins de temps au sol et moins de rebond vertical = foulée plus économique.';
     } else showCard('cBio1', false);
-    const gctTxt = H.sum.gct ? `Contact sol ${H.sum.gct.latest} ms (${H.sum.gct.latest < 250 ? 'élite' : H.sum.gct.latest < 300 ? 'efficace' : 'à raccourcir'})` : '';
-    const voTxt = H.sum.vosc ? `oscillation ${H.sum.vosc.latest} cm (${H.sum.vosc.latest < 8 ? 'très économique' : H.sum.vosc.latest < 10 ? 'bon' : 'rebond un peu haut'})` : '';
-    $('bio1Note').innerHTML = [gctTxt, voTxt].filter(Boolean).join(' · ') + '. Moins de temps au sol et moins de rebond vertical = foulée plus économique.';
 
-    // Bio2 : longueur de foulée (m) + puissance (W)
-    if (H.stride.length || H.power.length) {
-      showCard('cBio2', true);
-      mk('cBio2', { data: { datasets: [
-          { type: 'line', label: 'Foulée (m)', data: H.stride.map(p => ({ x: p.x, y: p.y })), borderColor: HC.stride, backgroundColor: HC.stride + '1f', pointRadius: 0, borderWidth: 2.5, tension: .3, yAxisID: 'y', fill: true },
-          { type: 'line', label: 'Puissance (W)', data: H.power.map(p => ({ x: p.x, y: p.y })), borderColor: HC.power, pointRadius: 0, borderWidth: 2, tension: .3, yAxisID: 'y2' }
-        ] },
-        options: { maintainAspectRatio: false, scales: {
-          x: { type: 'time', time: { unit: 'month' }, ticks: { maxTicksLimit: 8 } },
-          y: { title: { display: true, text: 'm' } },
-          y2: { position: 'right', grid: { drawOnChartArea: false }, title: { display: true, text: 'W' } } },
-          plugins: { legend: { display: true } } }
-      });
-    } else showCard('cBio2', false);
-    $('bio2Note').innerHTML = [H.sum.stride ? `Foulée ${H.sum.stride.latest} m` : '', H.sum.power ? `puissance ${H.sum.power.latest} W` : ''].filter(Boolean).join(' · ') + '. La puissance (W) est l\'équivalent course du cyclisme : un indicateur d\'effort indépendant du dénivelé et du vent.';
+    // Bandeau signature : cadence mesurée + foulée + puissance (3 charts → 3 tuiles)
+    $('bioStrip').innerHTML = [
+      hstat('Cadence mesurée', H.sum.cadence, ' spm'),
+      hstat('Longueur de foulée', H.sum.stride, ' m'),
+      hstat('Puissance', H.sum.power, ' W'),
+    ].join('');
+    const cs = H.sum.cadence;
+    $('bioStripNote').innerHTML = `Mesuré par l'Apple Watch (capteur réel, plus l'estimation par les pas). ` +
+      (cs ? `Cadence moyenne ${cs.mean} spm sur ${H.cadence.length} séances — ${cs.mean < 165 ? `<span style="color:${C.amber}">sous le repère 170-180, vise +5 spm par paliers (métronome)</span>` : cs.mean >= 172 ? `<span style="color:${C.neon}">dans la cible, continue</span>` : 'proche de la cible'}.` : '');
 
-    // Cadence mesurée par séance (vrai capteur, remplace l'estimation par les pas)
-    if (H.cadence.length > 1) {
-      showCard('cRunCad', true);
-      const cad = H.cadence;
-      const ma = cad.map((c, i) => { const w = cad.slice(Math.max(0, i - 5), i + 1); return { x: c.x, y: Math.round(w.reduce((s, x) => s + x.spm, 0) / w.length) }; });
-      mk('cRunCad', { data: { datasets: [
-          { type: 'scatter', label: 'séance', data: cad.map(c => ({ x: c.x, y: c.spm, km: c.km, pace: c.pace, hr: c.hr, name: c.name })), backgroundColor: C.green + '99', pointRadius: 5, hoverRadius: 7 },
-          { type: 'line', label: 'moyenne mobile (6)', data: ma, borderColor: C.blue, pointRadius: 0, borderWidth: 2.5, tension: .35 },
-          { type: 'line', label: 'cible 170', data: [{ x: cad[0].x, y: 170 }, { x: cad[cad.length - 1].x, y: 170 }], borderColor: C.green + '88', borderDash: [4, 4], borderWidth: 1, pointRadius: 0 }
-        ] },
-        options: { maintainAspectRatio: false, interaction: { mode: 'nearest', intersect: false }, scales: {
-          x: { type: 'time', time: { unit: 'month' }, ticks: { maxTicksLimit: 8 } },
-          y: { title: { display: true, text: 'pas/min' }, suggestedMin: 140, suggestedMax: 185 } },
-          plugins: { tooltip: { callbacks: {
-            title: ctx => ctx[0].datasetIndex === 0 ? ctx[0].raw.name : '',
-            label: ctx => ctx.datasetIndex === 0
-              ? [`${ctx.raw.x} · ${ctx.raw.km} km`, ctx.raw.pace ? `allure ${fmtPace(ctx.raw.pace)}/km` : '', ctx.raw.hr ? `${ctx.raw.hr} bpm` : '', `cadence ${ctx.parsed.y} pas/min`].filter(Boolean)
-              : null } } } }
-      });
-      const cs = H.sum.cadence;
-      $('runCadNote').innerHTML = `Cadence <b>mesurée</b> par l'Apple Watch (et non plus estimée). Moyenne ${cs.latest ? cs.mean : '?'} pas/min sur ${cad.length} séances.${cs && cs.mean < 165 ? ` <span style="color:${C.amber}">Sous 165 spm : marge de progression — vise +5 spm par paliers (métronome).</span>` : cs && cs.mean >= 172 ? ` <span style="color:${C.neon}">Bonne cadence, continue.</span>` : ''}`;
-    } else showCard('cRunCad', false);
-
-    // ---- 🔋 Charge : readiness + sommeil ----
+    // ═══ 🔋 CHARGE : readiness (jauge) + sommeil + récupération × charge (readiness vs ACWR) ═══
     const r = H.readiness;
     if (r) {
       showCard('cReady', true);
@@ -730,8 +723,7 @@
       $('readyVal').style.textShadow = `0 0 16px ${r.color}`;
       $('readyLbl').textContent = r.label;
       $('readyNote').innerHTML = `${r.icon} <b style="color:${r.color}">${r.label}</b> — VFC ${r.hrv} ms, FC repos ${r.rhr || '?'} bpm aujourd'hui. ${val >= 60 ? 'Feu vert pour une séance de qualité.' : val >= 45 ? 'Séance modérée OK, reste à l\'écoute.' : 'Privilégie le repos ou une sortie très facile.'}`;
-      healthLine('cReadyTrend', r.series, r.color, null, '/100', { min: 0, max: 100 });
-    } else { showCard('cReady', false); showCard('cReadyTrend', false); }
+    } else showCard('cReady', false);
 
     // Sommeil empilé (30 dernières nuits)
     if (H.sleep.length) {
@@ -752,7 +744,34 @@
       $('sleepNote').innerHTML = ss ? `Moyenne <b style="color:${ss.avg >= 7 ? C.green : C.amber}">${ss.avg} h</b>/nuit (${ss.n} nuits) · profond ${ss.deepPct} % · REM ${ss.remPct} %. Sous 7 h récurrent pénalise la récupération musculaire et la consolidation des adaptations.` : '';
     } else showCard('cSleep', false);
 
-    // ---- 🎛️ Cockpit : bandeau readiness ----
+    // LE croisement clé : readiness (récup) vs ACWR (charge) sur le même axe temps
+    const acwr = (D.acwr || []).filter(p => p.ratio !== null);
+    if (r && acwr.length > 5) {
+      showCard('cRecovery', true);
+      mk('cRecovery', { data: { datasets: [
+          { type: 'line', label: 'Readiness (récup.)', data: r.series.map(p => ({ x: p.x, y: p.y })), borderColor: r.color, backgroundColor: r.color + '1f', pointRadius: 0, borderWidth: 2.5, tension: .3, fill: true, yAxisID: 'y' },
+          { type: 'line', label: 'ACWR (charge 7j/28j)', data: acwr.map(p => ({ x: p.date, y: p.ratio })), borderColor: C.orange, pointRadius: 0, borderWidth: 2, tension: .3, yAxisID: 'y2' }
+        ] },
+        options: { maintainAspectRatio: false, scales: {
+          x: { type: 'time', time: { unit: 'month' }, ticks: { maxTicksLimit: 8 } },
+          y: { min: 0, max: 100, title: { display: true, text: 'readiness' } },
+          y2: { position: 'right', grid: { drawOnChartArea: false }, suggestedMin: 0, suggestedMax: 2, title: { display: true, text: 'ACWR' } } },
+          plugins: { legend: { display: true } } }
+      });
+      const rdByDate = new Map(r.series.map(p => [p.x, p.y]));
+      const corr = corrWith(acwr.map(p => ({ x: p.date, y: p.ratio })), rdByDate);
+      const curAcwr = acwr[acwr.length - 1].ratio, curRd = r.latest;
+      let diag;
+      if (curAcwr > 1.3 && curRd < 50) diag = `<span style="color:${C.red}">⚠️ Charge haute (ACWR ${curAcwr}) ET récup basse (${curRd}) : zone de surentraînement, allège.</span>`;
+      else if (curAcwr > 1.3 && curRd >= 60) diag = `<span style="color:${C.amber}">Charge haute mais bonne récup (${curRd}) : tu encaisses, surveille la VFC.</span>`;
+      else if (curAcwr < 0.8 && curRd >= 60) diag = `<span style="color:${C.neon}">Récup pleine (${curRd}) et charge basse : fenêtre idéale pour pousser le volume.</span>`;
+      else diag = `Équilibre correct (ACWR ${curAcwr}, readiness ${curRd}).`;
+      $('recoveryNote').innerHTML = (corr !== null && corr < -0.25
+        ? `Ta récupération chute quand la charge monte (corr ${corr.toFixed(2)}) — relation attendue et saine à surveiller. `
+        : '') + diag;
+    } else showCard('cRecovery', false);
+
+    // ═══ 🎛️ COCKPIT : bandeau readiness ═══
     const chip = [];
     if (H.sum.vo2) chip.push(`VO₂max ${H.sum.vo2.latest}`);
     if (H.sum.rhr) chip.push(`FC repos ${H.sum.rhr.latest} bpm`);
@@ -763,7 +782,7 @@
       <div><div class="ov-label" style="color:${r ? r.color : C.muted}">${r ? r.icon + ' Readiness — ' + r.label : '🩺 Données Apple Santé'}</div>
       <div class="ov-chips">${chip.join(' · ')}</div></div></div>`;
 
-    // ---- 🧠 Lab : insights physiologiques ajoutés au feed ----
+    // ═══ 🧠 LAB : insights physiologiques ajoutés au feed ═══
     const hi = [];
     if (H.sum.vo2) hi.push(`<b>VO₂max :</b> ${H.sum.vo2.latest} ml/kg/min — ${vo2lvl(H.sum.vo2)}. ${H.sum.vo2.improving ? '<span class="good">En progression</span> sur la période 📈' : 'Stable/en léger recul : un bloc d\'intervalles (VMA) le ferait remonter.'}`);
     if (r) hi.push(`<b>Readiness :</b> ${r.latest}/100 (${r.label}). ${r.latest < 45 ? '<span class="warn">Plusieurs jours sous 45 = surcharge probable, allège.</span>' : 'Bon état de récupération pour enchaîner la charge.'}`);

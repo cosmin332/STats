@@ -148,6 +148,11 @@
   .ppm-chip { background: rgba(255,255,255,.05); border: 1px solid var(--border); border-radius: 9px; padding: 7px 11px; font-size: .74rem; }
   .ppm-chip b { color: var(--cyan); }
   .ppm-chip .pc { color: var(--muted); }
+  .health-strip { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+  .hstat { background: rgba(255,255,255,.04); border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; }
+  .hstat .hv { font-size: 1.4rem; font-weight: 800; }
+  .hstat .hl { color: var(--muted); font-size: .74rem; margin-top: 2px; }
+  .hstat .ht { font-size: .72rem; margin-top: 4px; }
   /* Checklist bouclier */
   .check-item { display: flex; align-items: center; gap: 11px; padding: 9px 4px; border-bottom: 1px solid rgba(255,255,255,.05); cursor: pointer; }
   .check-item:last-child { border-bottom: none; }
@@ -245,15 +250,10 @@
     </div>
 
     <div id="healthMoteur" style="display:none">
-      <h2>🩺 Physiologie — Apple Santé</h2>
-      <div class="grid3">
-        <div class="card"><h3>VO₂max estimé</h3><div class="chart-wrap short"><canvas id="cVo2"></canvas></div>
-          <div class="note" id="vo2Note"></div></div>
-        <div class="card"><h3>FC de repos</h3><div class="chart-wrap short"><canvas id="cRhr"></canvas></div>
-          <div class="note" id="rhrNote"></div></div>
-        <div class="card"><h3>Variabilité cardiaque (VFC)</h3><div class="chart-wrap short"><canvas id="cHrv"></canvas></div>
-          <div class="note" id="hrvNote"></div></div>
-      </div>
+      <h2>🩺 Forme cardio — Apple Santé × entraînement</h2>
+      <div class="card"><h3>VO₂max mesuré vs charge de fond (CTL)</h3>
+        <div class="chart-wrap"><canvas id="cVo2"></canvas></div>
+        <div class="note" id="vo2Note"></div></div>
     </div>
 
     <h2>🔮 Prédictions chronométriques</h2>
@@ -288,14 +288,11 @@
 
     <div id="healthMeca" style="display:none">
       <h2>🦿 Dynamiques de course — Apple Santé</h2>
-      <div class="grid2">
-        <div class="card"><h3>Index de stress biomécanique — contact au sol & oscillation</h3>
-          <div class="chart-wrap"><canvas id="cBio1"></canvas></div><div class="note" id="bio1Note"></div></div>
-        <div class="card"><h3>Longueur de foulée & puissance</h3>
-          <div class="chart-wrap"><canvas id="cBio2"></canvas></div><div class="note" id="bio2Note"></div></div>
-      </div>
-      <div class="card" style="margin-top:14px"><h3>Cadence mesurée par séance (capteur Apple Watch)</h3>
-        <div class="chart-wrap"><canvas id="cRunCad"></canvas></div><div class="note" id="runCadNote"></div></div>
+      <div class="card"><h3>Index de stress biomécanique — contact au sol & oscillation verticale</h3>
+        <div class="chart-wrap"><canvas id="cBio1"></canvas></div><div class="note" id="bio1Note"></div></div>
+      <div class="card" style="margin-top:14px"><h3>Signature de foulée mesurée (capteur Apple Watch)</h3>
+        <div class="health-strip" id="bioStrip"></div>
+        <div class="note" id="bioStripNote"></div></div>
     </div>
 
     <div id="ppmWrap" style="display:none">
@@ -331,7 +328,7 @@
   <!-- ================= 📊 CHARGE ================= -->
   <div class="tab" id="tab-charge">
     <div id="healthCharge" style="display:none">
-      <h2>🔋 Récupération — Apple Santé</h2>
+      <h2>🔋 Récupération vs charge — Apple Santé × entraînement</h2>
       <div class="grid2">
         <div class="card"><h3>Readiness du jour — VFC + FC de repos vs ta ligne de base</h3>
           <div class="gauge-wrap"><canvas id="cReady"></canvas><div class="gauge-val" id="readyVal">—</div><div class="gauge-lbl" id="readyLbl">readiness</div></div>
@@ -339,8 +336,9 @@
         <div class="card"><h3>Sommeil — stades par nuit</h3><div class="chart-wrap"><canvas id="cSleep"></canvas></div>
           <div class="note" id="sleepNote"></div></div>
       </div>
-      <div class="card" style="margin-top:14px"><h3>Tendance readiness</h3><div class="chart-wrap short"><canvas id="cReadyTrend"></canvas></div>
-        <div class="note">Score quotidien 0–100 combinant VFC (haute = bon) et FC de repos (basse = bon), centré sur ta moyenne personnelle. Sous 45 plusieurs jours = signal de fatigue : privilégie une sortie facile ou du repos.</div></div>
+      <div class="card" style="margin-top:14px"><h3>Équilibre récupération / charge — readiness vs ACWR</h3>
+        <div class="chart-wrap"><canvas id="cRecovery"></canvas></div>
+        <div class="note" id="recoveryNote"></div></div>
     </div>
 
     <h2>🚨 Radar de blessure</h2>
