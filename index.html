@@ -200,6 +200,7 @@
     <div class="toolbar">
       <button class="btn primary" id="stravaBtn">🔗 Connecter Strava</button>
       <label class="btn">📥 CSV<input type="file" id="fileInput" accept=".csv,text/csv" hidden></label>
+      <label class="btn" id="healthLbl" title="Importer un export JSON de l'app Health Auto Export (Apple Santé)">🩺 Santé<input type="file" id="healthInput" accept=".json,application/json" hidden></label>
       <button class="btn" id="cfgBtn" title="Identifiants API Strava">⚙️</button>
       <button class="btn" id="resetBtn" title="Déconnecter et réinitialiser">↺</button>
     </div>
@@ -211,6 +212,7 @@
   <!-- ================= 🎛️ COCKPIT ================= -->
   <div class="tab active" id="tab-cockpit">
     <div class="card" id="overallMini" style="display:none;margin-bottom:14px"></div>
+    <div class="card" id="healthCockpit" style="display:none;margin-bottom:14px"></div>
     <div class="kpis" id="kpis"></div>
 
     <h2>⚡ Objectif adaptatif de la semaine</h2>
@@ -242,6 +244,18 @@
       <div class="card"><h3>Progression de l'allure (≥ 3 km, moyenne mobile 10 sorties)</h3><div class="chart-wrap"><canvas id="cProg"></canvas></div></div>
     </div>
 
+    <div id="healthMoteur" style="display:none">
+      <h2>🩺 Physiologie — Apple Santé</h2>
+      <div class="grid3">
+        <div class="card"><h3>VO₂max estimé</h3><div class="chart-wrap short"><canvas id="cVo2"></canvas></div>
+          <div class="note" id="vo2Note"></div></div>
+        <div class="card"><h3>FC de repos</h3><div class="chart-wrap short"><canvas id="cRhr"></canvas></div>
+          <div class="note" id="rhrNote"></div></div>
+        <div class="card"><h3>Variabilité cardiaque (VFC)</h3><div class="chart-wrap short"><canvas id="cHrv"></canvas></div>
+          <div class="note" id="hrvNote"></div></div>
+      </div>
+    </div>
+
     <h2>🔮 Prédictions chronométriques</h2>
     <div class="grid2">
       <div class="card" id="riegelCard"><h3>Chronos prédits (formule de Riegel)</h3><div id="riegelBody"></div><div id="capsBody"></div></div>
@@ -269,7 +283,19 @@
     <div class="card locked" style="margin-top:14px" id="bsiCard">
       <div class="lock-big">🔒</div>
       <h3>Index de stress biomécanique (GCT + oscillation verticale)</h3>
-      <div class="note" style="margin-top:4px">Nécessite une montre avec dynamiques de course (temps de contact au sol, oscillation verticale) — Garmin HRM, Coros POD… Tes enregistrements actuels n'ont pas ces capteurs. Dès qu'une activité synchronisée en contiendra, cette tuile s'activera : monitoring GCT/VO et delta de fatigue premier vs dernier kilomètre.</div>
+      <div class="note" style="margin-top:4px">Nécessite des dynamiques de course (temps de contact au sol, oscillation verticale). Importe un export <b>Apple Santé</b> (🩺) — ton Apple Watch les enregistre — et cette section se débloque avec tes vraies données.</div>
+    </div>
+
+    <div id="healthMeca" style="display:none">
+      <h2>🦿 Dynamiques de course — Apple Santé</h2>
+      <div class="grid2">
+        <div class="card"><h3>Index de stress biomécanique — contact au sol & oscillation</h3>
+          <div class="chart-wrap"><canvas id="cBio1"></canvas></div><div class="note" id="bio1Note"></div></div>
+        <div class="card"><h3>Longueur de foulée & puissance</h3>
+          <div class="chart-wrap"><canvas id="cBio2"></canvas></div><div class="note" id="bio2Note"></div></div>
+      </div>
+      <div class="card" style="margin-top:14px"><h3>Cadence mesurée par séance (capteur Apple Watch)</h3>
+        <div class="chart-wrap"><canvas id="cRunCad"></canvas></div><div class="note" id="runCadNote"></div></div>
     </div>
 
     <div id="ppmWrap" style="display:none">
@@ -304,6 +330,19 @@
 
   <!-- ================= 📊 CHARGE ================= -->
   <div class="tab" id="tab-charge">
+    <div id="healthCharge" style="display:none">
+      <h2>🔋 Récupération — Apple Santé</h2>
+      <div class="grid2">
+        <div class="card"><h3>Readiness du jour — VFC + FC de repos vs ta ligne de base</h3>
+          <div class="gauge-wrap"><canvas id="cReady"></canvas><div class="gauge-val" id="readyVal">—</div><div class="gauge-lbl" id="readyLbl">readiness</div></div>
+          <div class="note" id="readyNote"></div></div>
+        <div class="card"><h3>Sommeil — stades par nuit</h3><div class="chart-wrap"><canvas id="cSleep"></canvas></div>
+          <div class="note" id="sleepNote"></div></div>
+      </div>
+      <div class="card" style="margin-top:14px"><h3>Tendance readiness</h3><div class="chart-wrap short"><canvas id="cReadyTrend"></canvas></div>
+        <div class="note">Score quotidien 0–100 combinant VFC (haute = bon) et FC de repos (basse = bon), centré sur ta moyenne personnelle. Sous 45 plusieurs jours = signal de fatigue : privilégie une sortie facile ou du repos.</div></div>
+    </div>
+
     <h2>🚨 Radar de blessure</h2>
     <div class="grid2">
       <div class="card"><h3>ACWR — jauge (charge 7 j / 28 j)</h3>
@@ -395,6 +434,7 @@
 <script src="./compute.js"></script>
 <script src="./verdicts.js"></script>
 <script src="./strava.js"></script>
+<script src="./health.js"></script>
 <script src="./app.js"></script>
 </body>
 </html>

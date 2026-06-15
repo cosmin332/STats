@@ -2,7 +2,7 @@
    - navigations (index.html) : réseau d'abord → on voit toujours la dernière version en ligne,
      cache en secours hors-ligne ;
    - autres fichiers : stale-while-revalidate (rapide, mis à jour en arrière-plan). */
-const CACHE = 'running-stats-v12';
+const CACHE = 'running-stats-v13';
 const ASSETS = [
   './',
   './index.html',
@@ -10,6 +10,7 @@ const ASSETS = [
   './compute.js',
   './verdicts.js',
   './strava.js',
+  './health.js',
   './config.js',
   './activities.csv',
   './manifest.webmanifest',

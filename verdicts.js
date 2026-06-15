@@ -221,6 +221,40 @@
       }
     })();
 
+    // ---- Apple Santé : physiologie, récupération, biomécanique ----
+    (function () {
+      const H = D.health;
+      if (!H || !H.has) return;
+      const s = H.sum;
+      if (s.vo2) out.cVo2 = v(up(s.vo2.latest, [40, 45, 50, 55]), `VO₂max <b>${s.vo2.latest}</b> ml/kg/min. ` +
+        (s.vo2.improving ? 'En progression 📈.' : 'Stable — un bloc de VMA le ferait remonter.'));
+      if (s.rhr) {
+        const r = s.rhr.latest; // FC repos : basse = mieux
+        const key = r <= 48 ? 'excellent' : r <= 54 ? 'bien' : r <= 60 ? 'moyen' : r <= 66 ? 'bof' : 'faible';
+        out.cRhr = v(key, `FC de repos <b>${r} bpm</b>. ` +
+          (s.rhr.improving ? 'En baisse = forme aérobie qui monte.' : r <= 60 ? 'Bon niveau.' : 'Plutôt haute — fatigue, stress ou sommeil court possibles.'));
+      }
+      if (s.hrv) out.cHrv = v('info', `VFC <b>${s.hrv.latest} ms</b> (moy. ${s.hrv.mean}). ` +
+        (s.hrv.improving ? 'Tendance haute, bonne récupération nerveuse.' : 'Surveille les chutes brutales (fatigue/maladie).'));
+      if (H.readiness) {
+        const rd = H.readiness.latest;
+        out.cReady = v(up(rd, [32, 45, 60, 75]), `Readiness <b>${rd}/100</b> (${H.readiness.label}). ` +
+          (rd >= 60 ? 'Prêt pour une séance de qualité.' : rd >= 45 ? 'Séance modérée recommandée.' : 'Repos ou sortie très facile conseillés.'));
+      }
+      if (s.sleep) out.cSleep = v(up(s.sleep.avg, [6, 6.5, 7, 7.5]), `Sommeil moyen <b>${s.sleep.avg} h</b> (profond ${s.sleep.deepPct} %). ` +
+        (s.sleep.avg >= 7 ? 'Durée suffisante pour récupérer.' : 'Sous 7 h : première limite à ta progression.'));
+      if (s.gct || s.vosc) {
+        const parts = [];
+        if (s.gct) parts.push(`contact sol ${s.gct.latest} ms`);
+        if (s.vosc) parts.push(`oscillation ${s.vosc.latest} cm`);
+        const good = (!s.gct || s.gct.latest < 300) && (!s.vosc || s.vosc.latest < 10);
+        out.cBio1 = v(good ? 'bien' : 'moyen', `${parts.join(' · ')}. ` +
+          (good ? 'Foulée économique.' : 'Marge pour réduire le temps au sol / le rebond vertical.'));
+      }
+      if (s.cadence) out.cRunCad = v(up(s.cadence.mean, [158, 163, 168, 173]), `Cadence mesurée <b>${s.cadence.mean} pas/min</b> de moyenne. ` +
+        (s.cadence.mean >= 170 ? 'Foulée efficace.' : 'Vise +5 spm par paliers (métronome).'));
+    })();
+
     // ---- Score global ----
     const rated = Object.values(out).filter(x => x.lvl >= 0);
     if (rated.length) {
